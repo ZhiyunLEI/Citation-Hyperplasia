@@ -1,0 +1,3664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Citation Hyperplasia — Performance Preview</title>
+<style>
+:root {
+  --paper-width: 990px;
+  --paper-bg: #fbfaf6;
+  --screen-bg: #d1d1d1;
+  --ink: #111111;
+  --muted: #333333;
+  --rule: #111111;
+  --side: 60px;
+  --top: 42px;
+  --bottom: 58px;
+  --column-gap: 35px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+  background: var(--screen-bg);
+  color: var(--ink);
+  font-family: "Times New Roman", Times, serif;
+}
+
+.stage {
+  padding: 42px 0 88px;
+}
+
+.paper {
+  width: var(--paper-width);
+  min-height: 2380px;
+  margin: 0 auto;
+  padding: var(--top) var(--side) var(--bottom);
+  background: var(--paper-bg);
+  box-shadow: 0 12px 42px rgba(0,0,0,.24);
+  position: relative;
+  overflow: visible;
+  isolation: isolate;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+  user-select: none;
+}
+
+.lesion-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 9;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: .72;
+}
+
+.interaction-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 13;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  mix-blend-mode: normal;
+  opacity: .92;
+}
+
+.interactive-object {
+  position: absolute;
+  z-index: 14;
+  width: var(--interactive-size, 108px);
+  height: var(--interactive-size, 108px);
+  left: var(--interactive-x, 50%);
+  top: var(--interactive-y, 50%);
+  pointer-events: none;
+  opacity: 0;
+  transform: translate(-50%, -50%) scale(.94);
+  transform-origin: 50% 50%;
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: opacity, transform;
+}
+
+.interactive-object-img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: contain;
+  mix-blend-mode: multiply;
+  opacity: 1;
+  transform: rotate(var(--interactive-rot, 0deg)) scale(1);
+  transform-origin: 50% 50%;
+  filter: contrast(.94) saturate(.76) brightness(1.05);
+  user-select: none;
+  -webkit-user-drag: none;
+  will-change: transform, filter;
+}
+
+.interactive-object.is-visible {
+  animation: interactive-object-life 8s cubic-bezier(.22, .62, .20, 1) both;
+}
+
+@keyframes interactive-object-life {
+  0% {
+    opacity: .40;
+    transform: translate(-50%, -50%) scale(.94);
+  }
+  14% {
+    opacity: .55;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  76% {
+    opacity: .52;
+    transform: translate(-50%, -50%) scale(1.026);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.07);
+  }
+}
+
+.perf-hud {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  z-index: 9999;
+  padding: 5px 7px;
+  border: 1px solid rgba(0,0,0,.28);
+  background: rgba(250,248,242,.82);
+  color: rgba(12,11,10,.88);
+  font: 11px/1.25 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  letter-spacing: 0;
+  white-space: pre;
+  text-align: left;
+  pointer-events: none;
+  backdrop-filter: blur(3px);
+}
+
+.lesion-organism {
+  position: absolute;
+  left: 0;
+  top: 53.5%;
+  width: 94%;
+  height: 38.5%;
+  z-index: 7;
+  pointer-events: none;
+  transform-origin: 66% 48%;
+  mix-blend-mode: multiply;
+  filter: saturate(.82) contrast(1.05) brightness(1.02);
+  scale: calc(1 + var(--organ-reflex, 0) * .0032);
+  transition: scale 1800ms cubic-bezier(.16, .72, .20, 1);
+}
+
+.lesion-organism::before,
+.lesion-organism::after {
+  content: "";
+  position: absolute;
+  pointer-events: none;
+  border-radius: 50%;
+  mix-blend-mode: multiply;
+  opacity: 0;
+  z-index: 10;
+}
+
+.lesion-organism::before {
+  width: 20%;
+  height: 16%;
+  left: 59%;
+  top: 31%;
+  background:
+    radial-gradient(circle at 44% 48%, rgba(54, 42, 35, .18), transparent 38%),
+    radial-gradient(circle at 58% 52%, rgba(112, 88, 92, .10), transparent 54%);
+  filter: blur(7px) saturate(.75);
+  animation: membrane-wet-pulse-a 6.4s ease-in-out infinite;
+  animation-delay: -3.7s;
+  opacity: calc(var(--touch-wet-a, 0) + var(--organ-reflex, 0) * .035);
+}
+
+.lesion-organism::after {
+  width: 16%;
+  height: 12%;
+  left: 69%;
+  top: 48%;
+  background:
+    radial-gradient(circle at 52% 46%, rgba(43, 35, 29, .16), transparent 40%),
+    radial-gradient(circle at 40% 58%, rgba(88, 82, 47, .10), transparent 60%);
+  filter: blur(6px) saturate(.70);
+  animation: membrane-wet-pulse-b 7.6s ease-in-out infinite;
+  animation-delay: -4.9s;
+  opacity: calc(var(--touch-wet-b, 0) + var(--organ-reflex, 0) * .026);
+}
+
+.lesion-layer {
+  position: absolute;
+  display: block;
+  height: auto;
+  max-width: none;
+  user-select: none;
+  -webkit-user-drag: none;
+  transform-origin: 54% 50%;
+  will-change: transform, opacity, filter;
+}
+
+.lesion-depth {
+  width: 58%;
+  left: 39.2%;
+  top: 1%;
+  opacity: .74;
+  filter: blur(.55px) contrast(.94) saturate(.70) brightness(1.18);
+  animation: lesion-depth-breathe 34s ease-in-out infinite;
+  animation-delay: -10.2s;
+}
+
+.lesion-core {
+  width: 50%;
+  left: 44.1%;
+  top: 7.6%;
+  opacity: .90;
+  filter: contrast(1.025) saturate(.93) brightness(1.055) drop-shadow(0 10px 15px rgba(24, 18, 14, .17));
+  animation: lesion-core-breathe 31s cubic-bezier(.42, 0, .32, 1) infinite;
+  animation-delay: -7.8s;
+  scale: calc(1 + var(--organ-reflex, 0) * .0024);
+}
+
+.lesion-membrane {
+  width: 54%;
+  left: 43.8%;
+  top: 5.5%;
+  opacity: .70;
+  filter: contrast(.84) saturate(.50) brightness(1.35);
+  mix-blend-mode: multiply;
+  animation: lesion-membrane-breathe 37s cubic-bezier(.43, 0, .30, 1) infinite;
+  animation-delay: -9.6s;
+  scale: calc(1 + var(--organ-reflex, 0) * .0036);
+}
+
+.lesion-tendrils {
+  width: 98%;
+  left: -.55%;
+  top: -1.5%;
+  opacity: .58;
+  filter: contrast(.84) saturate(.46) brightness(1.32) drop-shadow(0 1px 1px rgba(37, 29, 24, .05));
+  animation: lesion-tendril-breathe 44s ease-in-out infinite;
+  animation-delay: -12.4s;
+}
+
+.lesion-debris {
+  width: 68%;
+  left: 32.7%;
+  top: -3.8%;
+  opacity: .54;
+  filter: contrast(.78) saturate(.44) brightness(1.42);
+  animation: lesion-debris-drift 48s ease-in-out infinite;
+  animation-delay: -15.1s;
+}
+
+.lesion-dust {
+  width: 82%;
+  left: 21.8%;
+  top: -9%;
+  opacity: .155;
+  filter: contrast(.70) saturate(.36) brightness(1.32);
+  mix-blend-mode: multiply;
+  animation: lesion-dust-drift 56s ease-in-out infinite;
+  animation-delay: -18.5s;
+}
+
+.interaction-stress {
+  position: absolute;
+  inset: 0;
+  z-index: 12;
+  pointer-events: none;
+  opacity: 0;
+  mix-blend-mode: multiply;
+  transform: translateZ(0);
+  background:
+    radial-gradient(
+      ellipse at calc(var(--stress-x, 64%) - var(--stress-size, 135px) * .08) calc(var(--stress-y, 72%) + var(--stress-size, 135px) * .03),
+      rgba(30, 23, 20, .055) 0%,
+      rgba(72, 55, 44, .036) 15%,
+      rgba(98, 86, 60, .018) 28%,
+      rgba(0, 0, 0, 0) 42%
+    ),
+    radial-gradient(
+      ellipse at calc(var(--stress-x, 64%) + var(--stress-size, 135px) * .12) calc(var(--stress-y, 72%) - var(--stress-size, 135px) * .08),
+      rgba(62, 45, 56, .034) 0%,
+      rgba(80, 66, 50, .022) 20%,
+      rgba(0, 0, 0, 0) 38%
+    );
+  filter: blur(.7px) saturate(.48) contrast(.92);
+  transition: opacity 90ms linear, filter 160ms ease-out;
+}
+
+.interaction-stress::before,
+.interaction-stress::after {
+  content: "";
+  position: absolute;
+  left: var(--stress-x, 64%);
+  top: var(--stress-y, 72%);
+  width: var(--stress-size, 135px);
+  height: calc(var(--stress-size, 135px) * .58);
+  border-radius: 50%;
+  transform: translate(-50%, -50%) rotate(var(--stress-rot, -8deg));
+  pointer-events: none;
+  mix-blend-mode: multiply;
+}
+
+.interaction-stress::before {
+  background:
+    radial-gradient(circle at 44% 46%, rgba(25, 19, 17, .075), transparent 18%),
+    radial-gradient(circle at 61% 56%, rgba(70, 51, 41, .052), transparent 35%),
+    radial-gradient(circle at 36% 64%, rgba(104, 86, 58, .028), transparent 54%);
+  filter: blur(2.8px);
+  opacity: .30;
+}
+
+.interaction-stress::after {
+  width: calc(var(--stress-size, 135px) * .74);
+  height: calc(var(--stress-size, 135px) * .34);
+  background:
+    radial-gradient(circle at 42% 50%, rgba(38, 29, 27, .070), transparent 26%),
+    radial-gradient(circle at 63% 47%, rgba(78, 52, 62, .036), transparent 52%);
+  filter: blur(1.2px);
+  opacity: .24;
+}
+
+.paper.is-touch-stressed .interaction-stress {
+  opacity: .085;
+  animation: touch-stress-decay 940ms cubic-bezier(.18, .78, .24, 1) both;
+}
+
+.paper.is-consuming .interaction-stress {
+  opacity: .16;
+  filter: blur(.85px) saturate(.54) contrast(.96);
+  animation: consume-stress-pulse 1380ms ease-in-out both;
+}
+
+.paper.is-releasing .interaction-stress {
+  opacity: .12;
+  filter: blur(.85px) saturate(.50);
+  animation: release-stress-drain 2600ms ease-out both;
+}
+
+.paper.is-interacting .lesion-layer,
+.paper.is-scrolling .lesion-layer {
+  animation-play-state: paused;
+}
+
+
+@keyframes lesion-core-breathe {
+  0%, 100% {
+    transform: translate(0, 0) scale(1) rotate(-1deg);
+    filter: contrast(1.02) saturate(.94) brightness(1.055) drop-shadow(0 10px 15px rgba(24, 18, 14, .17));
+  }
+  38% {
+    transform: translate(-.42%, .25%) scale(1.022) rotate(-.16deg);
+    filter: contrast(1.055) saturate(.965) brightness(1.035) drop-shadow(0 13px 19px rgba(19, 12, 9, .22));
+  }
+  62% {
+    transform: translate(-.56%, .34%) scale(1.031) rotate(.22deg);
+    filter: contrast(1.075) saturate(.99) brightness(1.020) drop-shadow(0 15px 22px rgba(18, 11, 8, .25));
+  }
+}
+
+@keyframes lesion-membrane-breathe {
+  0%, 100% {
+    transform: translate(.2%, -.2%) scale(.998) rotate(.4deg);
+    opacity: .50;
+  }
+  45% {
+    transform: translate(-.25%, .20%) scale(1.014) rotate(-.16deg);
+    opacity: .62;
+  }
+  68% {
+    transform: translate(-.38%, .30%) scale(1.023) rotate(-.24deg);
+    opacity: .69;
+  }
+}
+
+@keyframes lesion-depth-breathe {
+  0%, 100% {
+    transform: translate(.1%, .2%) scale(1);
+    opacity: .66;
+  }
+  58% {
+    transform: translate(-.34%, .38%) scale(1.016);
+    opacity: .79;
+  }
+}
+
+@keyframes lesion-tendril-breathe {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: .40;
+  }
+  52% {
+    transform: translate(.055%, .035%) scale(1.001);
+    opacity: .52;
+  }
+}
+
+@keyframes lesion-debris-drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: .44;
+  }
+  56% {
+    transform: translate(.18%, -.12%) scale(1.004);
+    opacity: .60;
+  }
+}
+
+@keyframes lesion-dust-drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: .11;
+    filter: contrast(.68) saturate(.34) brightness(1.34);
+  }
+  43% {
+    transform: translate(.13%, -.07%) scale(1.002);
+    opacity: .165;
+    filter: contrast(.73) saturate(.38) brightness(1.30);
+  }
+  71% {
+    transform: translate(-.08%, .055%) scale(.999);
+    opacity: .13;
+    filter: contrast(.70) saturate(.36) brightness(1.32);
+  }
+}
+
+@keyframes touch-stress-decay {
+  0% {
+    opacity: .20;
+    transform: scale(.94) rotate(-.12deg);
+  }
+  24% {
+    opacity: .15;
+    transform: scale(.995) rotate(.06deg);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(1.030) rotate(.14deg);
+  }
+}
+
+@keyframes consume-stress-pulse {
+  0% {
+    opacity: .24;
+    transform: scale(.99) rotate(0deg);
+  }
+  34% {
+    opacity: .38;
+    transform: scale(1.016) rotate(-.18deg);
+  }
+  72% {
+    opacity: .30;
+    transform: scale(1.008) rotate(.10deg);
+  }
+  100% {
+    opacity: .12;
+    transform: scale(1.028) rotate(0deg);
+  }
+}
+
+@keyframes release-stress-drain {
+  0% {
+    opacity: .25;
+    transform: translate(0, 0) scale(1.008);
+  }
+  36% {
+    opacity: .18;
+    transform: translate(.12%, .35%) scale(1.022);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(.20%, .92%) scale(1.052);
+  }
+}
+
+@keyframes membrane-wet-pulse-a {
+  0%, 100% {
+    opacity: var(--touch-wet-a, 0);
+    transform: translate(0, 0) scale(.96) rotate(-4deg);
+  }
+  38% {
+    opacity: calc(var(--touch-wet-a, 0) + .34);
+    transform: translate(-1.2%, .8%) scale(1.08) rotate(2deg);
+  }
+  58% {
+    opacity: calc(var(--touch-wet-a, 0) + .12);
+    transform: translate(.6%, -.3%) scale(1.02) rotate(-1deg);
+  }
+}
+
+@keyframes membrane-wet-pulse-b {
+  0%, 100% {
+    opacity: calc(var(--touch-wet-b, 0) + .02);
+    transform: translate(0, 0) scale(1) rotate(5deg);
+  }
+  31% {
+    opacity: calc(var(--touch-wet-b, 0) + .24);
+    transform: translate(.8%, -.7%) scale(1.10) rotate(-2deg);
+  }
+  64% {
+    opacity: calc(var(--touch-wet-b, 0) + .08);
+    transform: translate(-.4%, .5%) scale(.98) rotate(1deg);
+  }
+}
+
+.infection-host {
+  position: relative;
+  transform-origin: var(--infection-origin-x, 50%) var(--infection-origin-y, 50%);
+}
+
+.micro.infection-host {
+  display: inline-block;
+}
+
+.trace-box .trace-grid p:first-child .micro.infection-host {
+  color: #1c1a18;
+  filter: blur(0) contrast(1.01);
+  text-shadow: .15px .08px 0 rgba(57, 47, 38, .12);
+}
+
+.infection-far {
+  color: #181715;
+}
+
+.infection-mid {
+  color: #171413;
+  transform:
+    translate(calc(var(--line-dx, 0px) * .22), calc(var(--line-dy, 0px) * .22))
+    rotate(calc(var(--line-rot, 0deg) * .20))
+    skewX(calc(var(--line-skew, 0deg) * .18));
+  filter: blur(calc(var(--line-blur, 0px) * .28)) contrast(1.03);
+  text-shadow: .25px .15px 0 rgba(52, 43, 37, .28);
+}
+
+.infection-near {
+  color: #15100f;
+  transform: translate(var(--line-dx, 0px), var(--line-dy, 0px)) rotate(var(--line-rot, 0deg)) skewX(var(--line-skew, 0deg));
+  filter: blur(var(--line-blur, 0px)) contrast(1.13);
+  text-shadow:
+    .45px .25px 0 rgba(65, 47, 38, .32),
+    -.35px .25px 0 rgba(30, 95, 104, .12);
+}
+
+.infection-chaotic {
+  color: #0e0b0a;
+  transform:
+    translate(var(--line-dx, 0px), var(--line-dy, 0px))
+    rotate(var(--line-rot, 0deg))
+    skew(var(--line-skew, 0deg), var(--line-skew-y, 0deg))
+    scaleX(var(--line-scale-x, 1));
+  filter: blur(var(--line-blur, .32px)) contrast(1.34) saturate(.82);
+  text-shadow:
+    0 0 2.4px rgba(8, 6, 5, .78),
+    1.8px .7px 0 rgba(37, 24, 19, .40),
+    -1.4px -.6px 0 rgba(19, 91, 103, .16),
+    .6px -1px 0 rgba(88, 70, 31, .18);
+}
+
+.infection-inside {
+  color: #100d0c;
+  transform:
+    translate(var(--line-dx, 0px), var(--line-dy, 0px))
+    rotate(var(--line-rot, 0deg))
+    skew(var(--line-skew, 0deg), calc(var(--line-skew-y, 0deg) * .45))
+    scaleX(var(--line-scale-x, 1));
+  filter: blur(var(--line-blur, .18px)) contrast(1.26) saturate(.90);
+  text-shadow:
+    0 0 1.2px rgba(14, 11, 10, .62),
+    .8px .4px 0 rgba(65, 47, 38, .28),
+    -.55px .25px 0 rgba(21, 100, 112, .14);
+}
+
+header,
+.article {
+  position: relative;
+  z-index: 2;
+}
+
+.journal-bar {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 22px;
+  padding-bottom: 7px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--rule);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11.4px;
+  line-height: 1.15;
+  white-space: nowrap;
+}
+
+.article-type {
+  margin: 0 0 12px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11.4px;
+  line-height: 1.2;
+  color: var(--muted);
+  letter-spacing: 0;
+}
+
+h1 {
+  margin: 0 0 12px;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 28.5px;
+  line-height: 1.11;
+  font-weight: 700;
+  letter-spacing: 0;
+}
+
+.author {
+  margin: 0 0 15px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 12.5px;
+  line-height: 1.28;
+}
+
+.meta-line {
+  margin-top: 5px;
+  font-size: 11.2px;
+  color: var(--muted);
+}
+
+.abstract,
+.keywords {
+  margin: 0 0 10px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 13.4px;
+  line-height: 1.23;
+  text-align: left;
+}
+
+.label {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 12.3px;
+  font-weight: 700;
+}
+
+.article {
+  margin-top: 15px;
+  column-count: 2;
+  column-gap: var(--column-gap);
+  font-family: "Times New Roman", Times, serif;
+  font-size: 14px;
+  line-height: 1.18;
+  text-align: justify;
+  hyphens: auto;
+}
+
+.article h2,
+.article h3 {
+  margin: 11px 0 5px;
+  break-after: avoid;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15.4px;
+  line-height: 1.12;
+  font-weight: 700;
+  text-align: left;
+}
+
+.article h3 {
+  font-size: 14.5px;
+}
+
+.article p {
+  margin: 0 0 6.8px;
+  text-indent: 1em;
+}
+
+.full {
+  column-span: all;
+  break-inside: avoid;
+  margin: 13px 0 15px;
+}
+
+.table-block {
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11.5px;
+  line-height: 1.16;
+  text-align: left;
+}
+
+.table-number {
+  margin-bottom: 2px;
+  font-weight: 700;
+}
+
+.table-title {
+  margin-bottom: 5px;
+  font-style: italic;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  border-top: 1px solid #111;
+  border-bottom: 1px solid #111;
+  background: rgba(251,250,246,.9);
+}
+
+thead tr {
+  border-bottom: .85px solid #111;
+}
+
+th,
+td {
+  padding: 4px 6px;
+  border: 0;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  font-weight: 700;
+}
+
+.note-row {
+  margin-top: 5px;
+  font-size: 10.7px;
+  line-height: 1.16;
+}
+
+.trace-box {
+  column-span: all;
+  break-inside: avoid;
+  margin: 15px 0 16px;
+  padding: 13px 15px 12px;
+  border-top: 0;
+  border-bottom: 0;
+  background: rgba(245,244,239,.72);
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 11.4px;
+  line-height: 1.2;
+  text-align: left;
+  position: relative;
+  z-index: 10;
+}
+
+.trace-box::before,
+.trace-box::after {
+  content: "";
+  position: absolute;
+  left: 6px;
+  right: 8px;
+  height: 1px;
+  background:
+    linear-gradient(90deg,
+      rgba(12,10,9,.86) 0 18%,
+      transparent 18% 20%,
+      rgba(12,10,9,.70) 20% 43%,
+      rgba(66,54,43,.46) 43% 50%,
+      transparent 50% 53%,
+      rgba(12,10,9,.72) 53% 77%,
+      rgba(12,10,9,.42) 77% 100%);
+  transform-origin: 63% 50%;
+  filter: blur(.12px);
+  pointer-events: none;
+}
+
+.trace-box::before {
+  top: 0;
+  transform: translateY(-1px) rotate(.34deg) skewX(-4.2deg);
+}
+
+.trace-box::after {
+  bottom: 0;
+  transform: translateY(1px) rotate(-.46deg) skewX(5.4deg);
+  opacity: .70;
+}
+
+.trace-box h2 {
+  margin-top: 0;
+}
+
+.trace-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 13px 22px;
+}
+
+.trace-grid p {
+  margin: 0 0 5px;
+  text-indent: 0;
+  text-align: left;
+}
+
+.trace-term {
+  font-weight: 700;
+}
+
+.micro {
+  color: #333;
+  letter-spacing: 0;
+}
+
+.references {
+  column-span: all;
+  column-count: 2;
+  column-gap: var(--column-gap);
+  margin-top: 14px;
+  font-family: "Times New Roman", Times, serif;
+  font-size: 12px;
+  line-height: 1.18;
+  text-align: left;
+  position: relative;
+  z-index: 10;
+  isolation: isolate;
+}
+
+.references h2 {
+  column-span: all;
+  margin: 0 0 7px;
+  font-family: Arial, Helvetica, sans-serif;
+  font-size: 15.4px;
+  line-height: 1.12;
+  font-weight: 700;
+  position: relative;
+  z-index: 6;
+  text-shadow:
+    .4px .25px 0 rgba(251,250,246,.72),
+    -.35px -.2px 0 rgba(251,250,246,.60);
+}
+
+.references p {
+  margin: 0 0 4.8px;
+  padding-left: 18px;
+  text-indent: -18px;
+  text-align: left;
+  position: relative;
+  z-index: 3;
+}
+
+.references p:nth-of-type(-n+3) {
+  z-index: 5;
+  text-shadow:
+    .35px .20px 0 rgba(251,250,246,.62),
+    -.25px -.15px 0 rgba(251,250,246,.42);
+}
+
+.reference-mildew {
+  position: absolute;
+  inset: 30px -8px -6px -10px;
+  z-index: 4;
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  opacity: .66;
+}
+
+.mildew-dot,
+.mildew-spore,
+.mildew-glyph {
+  position: absolute;
+  display: block;
+  pointer-events: none;
+  transform-origin: 50% 50%;
+}
+
+.mildew-dot {
+  width: var(--ms, 3px);
+  height: var(--ms, 3px);
+  left: var(--mx);
+  top: var(--my);
+  border-radius: 50%;
+  background: rgba(43,38,31,var(--ma, .34));
+  filter: blur(var(--mb, .18px));
+  transform: translate(-50%, -50%);
+}
+
+.mildew-spore {
+  left: var(--mx);
+  top: var(--my);
+  color: rgba(45,39,31,var(--ma, .20));
+  font: var(--mwgt, 560) var(--ms, 5px)/1 "Times New Roman", Times, serif;
+  letter-spacing: var(--mls, 0);
+  filter: blur(var(--mb, .20px)) contrast(1.02);
+  opacity: var(--mo, .72);
+  transform: translate(-50%, -50%) rotate(var(--mr, 0deg)) scaleX(var(--mss, 1));
+  animation: mildew-pulse var(--mt, 25s) ease-in-out infinite alternate;
+}
+
+.mildew-glyph {
+  left: var(--mx);
+  top: var(--my);
+  color: rgba(38,34,29,var(--ma, .42));
+  font: var(--mwgt, 650) var(--mfz, 7px)/1 "Times New Roman", Times, serif;
+  filter: blur(var(--mb, .15px));
+  transform: rotate(var(--mr, 0deg));
+  text-shadow: 0 0 1.1px rgba(0,0,0,.18);
+}
+
+.mildew-thread {
+  left: var(--mx);
+  top: var(--my);
+  max-width: var(--mw, 86px);
+  color: rgba(34,30,25,var(--ma, .18));
+  font: var(--mwgt, 540) var(--mfz, 4px)/.82 "Times New Roman", Times, serif;
+  letter-spacing: var(--mls, .3px);
+  filter: blur(var(--mb, .18px));
+  transform: rotate(var(--mr, 0deg)) skewX(var(--msk, 0deg));
+  transform-origin: 0 50%;
+  white-space: normal;
+  text-shadow: 0 0 .9px rgba(0,0,0,.14);
+}
+
+@keyframes mildew-pulse {
+  0%, 100% {
+    opacity: .44;
+    filter: blur(var(--mb, .45px));
+  }
+  52% {
+    opacity: var(--ma, .58);
+    filter: blur(calc(var(--mb, .45px) + .22px));
+  }
+}
+
+.infected-char {
+  display: inline-block;
+  opacity: 1;
+  color: var(--lesion-color, #111);
+  font-weight: var(--lesion-weight, 700);
+  transform-origin: 50% 62%;
+  transform:
+    translate(calc(var(--lesion-dx, 0px) * .42), calc(var(--lesion-dy, 0px) * .42))
+    rotate(calc(var(--lesion-rot, 0deg) * .36))
+    scale(var(--lesion-scale, 1));
+  text-shadow:
+    0 0 var(--lesion-shadow, 0px) rgba(16, 14, 13, .46),
+    var(--lesion-smear-x, 0px) var(--lesion-smear-y, 0px) 0 rgba(18, 16, 16, .28);
+}
+
+.infection-near .infected-char {
+  mix-blend-mode: multiply;
+  will-change: transform, filter;
+  animation: infected-breathe calc(var(--lesion-speed, 8s) * 1.35) ease-in-out infinite alternate;
+  animation-delay: var(--lesion-delay, 0s);
+}
+
+.infection-inside .infected-char {
+  mix-blend-mode: multiply;
+  will-change: transform, filter;
+  animation: infected-breathe var(--lesion-speed, 6.2s) ease-in-out infinite alternate;
+  animation-delay: var(--lesion-delay, 0s);
+  text-shadow:
+    0 0 2px rgba(8, 6, 5, .72),
+    1.2px .5px 0 rgba(35, 24, 20, .42),
+    -1px -.35px 0 rgba(69, 58, 31, .28);
+}
+
+.infection-chaotic .infected-char {
+  mix-blend-mode: multiply;
+  will-change: transform, filter;
+  animation: infected-breathe var(--lesion-speed, 6.2s) ease-in-out infinite alternate;
+  animation-delay: var(--lesion-delay, 0s);
+  text-shadow:
+    0 0 2.8px rgba(7, 5, 4, .82),
+    1.4px .7px 0 rgba(34, 22, 18, .50),
+    -1px -.7px 0 rgba(84, 72, 34, .26);
+}
+
+@keyframes infected-breathe {
+  0% {
+    transform:
+      translate(calc(var(--lesion-dx, 0px) * .18), calc(var(--lesion-dy, 0px) * .18))
+      rotate(calc(var(--lesion-rot, 0deg) * .28))
+      scale(1);
+    filter: blur(0px);
+  }
+  47% {
+    transform:
+      translate(calc(var(--lesion-dx, 0px) * .72), calc(var(--lesion-dy, 0px) * .72))
+      rotate(calc(var(--lesion-rot, 0deg) * .76))
+      scale(var(--lesion-scale, 1.08));
+    filter: blur(var(--lesion-blur, .15px));
+  }
+  100% {
+    transform:
+      translate(var(--lesion-dx, 0px), var(--lesion-dy, 0px))
+      rotate(var(--lesion-rot, 0deg))
+      scale(calc(var(--lesion-scale, 1.08) + .04));
+    filter: blur(var(--lesion-blur, .15px));
+  }
+}
+
+@media (max-width: 1050px) {
+  .paper {
+    width: 94vw;
+    padding-left: 5.6vw;
+    padding-right: 5.6vw;
+  }
+}
+
+@media print {
+  body {
+    background: #ffffff;
+  }
+  .stage {
+    padding: 0;
+  }
+  .paper {
+    width: auto;
+    min-height: auto;
+    margin: 0;
+    padding: 0;
+    box-shadow: none;
+  }
+}
+</style>
+</head>
+<body>
+<div class="stage">
+<main class="paper">
+<canvas class="lesion-canvas" id="lesionCanvas" aria-hidden="true"></canvas>
+<canvas class="interaction-canvas" id="interactionCanvas" aria-hidden="true"></canvas>
+<div class="interactive-object" id="interactiveObject" aria-hidden="true">
+  <img class="interactive-object-img" id="interactiveObjectImg" src="assets/lesions-opt/lesion_interactive_objects.webp" alt="">
+</div>
+<div class="lesion-organism" aria-hidden="true">
+  <img class="lesion-layer lesion-depth" src="assets/lesions-opt/lesion_depth_shadow.webp" alt="">
+  <img class="lesion-layer lesion-tendrils" src="assets/lesions-opt/lesion_tendrils.webp" alt="">
+  <img class="lesion-layer lesion-debris" src="assets/lesions-opt/lesion_edge_debris.webp" alt="">
+  <img class="lesion-layer lesion-dust" src="assets/lesions-opt/lesion_micro_citation_dust.webp" alt="">
+  <img class="lesion-layer lesion-core" src="assets/lesions-opt/lesion_core_main.webp" alt="">
+  <img class="lesion-layer lesion-membrane" src="assets/lesions-opt/lesion_membrane_overlay.webp" alt="">
+</div>
+<div class="interaction-stress" aria-hidden="true"></div>
+
+<header>
+  <div class="journal-bar">
+    <span>Journal of Experiential Simulation | Vol. 1, No. 1, 2026 | Article 001</span>
+    <span>DOI: 10.0000/jes.2026.001</span>
+  </div>
+
+  <div class="article-type">Research Article · Fictional publication for the media artwork <em>Citation Hyperplasia</em></div>
+
+  <h1>Toward a Quantifiable Theory of Experiential Simulation: Citation, Verification, and the Measurable Body</h1>
+
+  <div class="author">
+    <strong>Zhiyun Lei</strong><br>
+    Department of Digital Media Art, Journal of Experiential Simulation Research Unit
+    <div class="meta-line">Received 12 January 2026 · Accepted 18 March 2026 · Published online 06 June 2026</div>
+  </div>
+
+  <div class="abstract">
+    <span class="label">Abstract</span>
+    This article proposes a fictive theory of experiential simulation in which immersive media, bodily presence, and academic verification are treated as interdependent systems of measurement. Rather than approaching presence as a purely subjective state, the article examines how experience is rendered legible through citation, indexing, and repeatable forms of scholarly validation. In this framework, the body is not simply represented by media; it is made accountable through textual systems that name, classify, and verify experience. As references accumulate, they exceed their evidentiary function and acquire a residual visual agency of their own.
+  </div>
+
+  <div class="keywords">
+    <span class="label">Keywords</span>
+    experiential simulation; citation; verification; embodiment; measurable body; metadata; presence
+  </div>
+</header>
+
+<article class="article">
+
+<h2>1. Introduction</h2>
+<p>Experiential simulation has become a central term for describing the mediated production of presence, embodiment, and spatial attention in immersive environments. Yet the scholarly language used to validate such experience often depends on a second simulation: the conversion of unstable perception into stable textual evidence. Presence is measured, compared, cited, indexed, and redistributed through a system of scholarly signs.</p>
+<p>This article treats that conversion as both a methodological condition and an aesthetic problem. It asks what happens when the experiential body, instead of remaining the origin of perception, becomes a measurable object within citation systems, metadata infrastructures, and institutional forms of verification.</p>
+<p>The argument is deliberately positioned between media theory, artistic research, and speculative methodology. It does not offer a conventional empirical model; rather, it stages the academic article itself as a site where measurement, citation, and bodily experience begin to contaminate one another.</p>
+
+<h2>2. Presence, Embodiment, and Measurement</h2>
+<p>In immersive media studies, presence is often defined as the feeling of being there. This formulation, however, conceals the institutional labour required to transform such feeling into researchable evidence. Interviews, scales, diagrams, models, and citations each participate in making presence communicable.</p>
+<p>Embodiment is therefore not only a phenomenological condition but also a documentary one. The body enters the article through descriptions of perception, movement, orientation, affect, and spatial awareness. Once written, these experiential traces become available for comparison, quotation, indexing, and evaluation.</p>
+<p>The measurable body is not a biological body reduced to data, nor a purely virtual avatar. It is a scholarly construction: a body produced through the repeated alignment of experience with recognised vocabularies of evidence.</p>
+
+<h2>3. Methodology</h2>
+<p>The article adopts a speculative methodological format in which the visual and rhetorical conventions of academic publishing are treated as material structures. Citation density, DOI repetition, reference accumulation, and indexing language are read not as neutral paratexts but as operative components of the research object.</p>
+<p>Rather than separating argument from presentation, the method allows form to become evidence. The page is organised as a clean scholarly surface so that later typographic disturbances can be understood as internal symptoms of the article itself, not as external decoration.</p>
+
+<div class="full table-block">
+  <div class="table-number">Table 1</div>
+  <div class="table-title">Operational indicators of citation hyperplasia</div>
+  <table>
+    <thead>
+      <tr>
+        <th>Dimension</th>
+        <th>Indicator</th>
+        <th>Textual symptom</th>
+        <th>Visual manifestation</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Citation density</td><td>References per paragraph</td><td>Brackets, years, and author names accumulate</td><td>Grey textual clusters begin to form</td></tr>
+      <tr><td>Identifier pressure</td><td>DOI, ISSN, database tags</td><td>Paratext interrupts argument</td><td>Linear reading becomes fibrous</td></tr>
+      <tr><td>Indexing value</td><td>Q ranking, SSCI, Scopus, h-index</td><td>Metrics replace interpretation</td><td>Institutional residue thickens</td></tr>
+      <tr><td>Verification loop</td><td>Citation validates citation</td><td>Evidence becomes recursive</td><td>Knotted textual formations emerge</td></tr>
+    </tbody>
+  </table>
+  <div class="note-row"><em>Note.</em> The table condenses the diagnostic vocabulary of the artwork into a fictional research format.</div>
+</div>
+
+<h2>4. Citation as Verification</h2>
+<p>Citation is commonly understood as a means of attribution. It acknowledges prior work, situates an argument, and enables scholarly accountability. Yet citation also functions as a technology of verification. It authorises claims by placing them within a recognised network of names, dates, journals, and disciplinary lineages.</p>
+<p>When citation becomes excessive, its evidentiary role begins to change. References no longer simply support an argument; they produce an atmosphere of legitimacy. The reader encounters not only ideas but also the visual density of academic approval: brackets, years, initials, volume numbers, issue numbers, page ranges, identifiers, and database labels.</p>
+<p>This accumulation forms what may be called citation hyperplasia: a condition in which the supporting apparatus of scholarship expands until it begins to compete with, obscure, or even generate the argument it was meant to verify.</p>
+<p>In this sense, the citation is not a passive mark. It is a small institutional machine embedded within the sentence.</p>
+
+<h2>5. The Measurable Body</h2>
+<p>The measurable body appears wherever embodied experience must be stabilised for academic circulation. A feeling of spatial presence becomes a construct; a perceptual disturbance becomes a code; a bodily orientation becomes an indicator; an affective response becomes a result.</p>
+<p>This transformation is not simply reductive. Measurement allows experience to travel across contexts, audiences, and disciplines. At the same time, it introduces a structural tension: the more precisely experience is made verifiable, the more it risks becoming detached from the unstable bodily conditions that produced it.</p>
+<p>The measurable body is therefore double. It is both an empirical necessity and a textual fiction, both an object of inquiry and an effect of scholarly formatting.</p>
+
+<h2>6. From Evidence to Residue</h2>
+<p>Once an experiential claim has been cited, indexed, and circulated, it leaves behind a residue. This residue is not only semantic; it is visual and infrastructural. DOI strings, database categories, impact metrics, and reference lists accumulate around the article as signs of legitimacy.</p>
+<p>These signs are usually treated as marginal. In this work, they become central. The residual apparatus of scholarship is reimagined as a material capable of growth, adhesion, repetition, and eventual deformation.</p>
+
+<h2>7. Citation Hyperplasia</h2>
+<p>Citation hyperplasia names the moment at which verification becomes pathological. The article remains formally recognisable as scholarship, but its surface begins to display the excessive growth of the very systems that certify it.</p>
+<p>The concept does not reject citation. Instead, it asks what citation becomes when it is intensified by metrics, indexing, platform visibility, and institutional evaluation. Under these conditions, citation is no longer only a scholarly practice; it becomes a visual and administrative environment.</p>
+<p>The page thus becomes a diagnostic field. Its clean typographic order is not the opposite of disease but the condition that allows the disease to become visible.</p>
+
+<h2>8. Conclusion</h2>
+<p>This fictive article proposes that experiential simulation is never only produced by immersive media. It is also produced by the scholarly systems that translate experience into evidence, evidence into citation, and citation into value.</p>
+<p>By treating citation as both a verification system and a visual material, Citation Hyperplasia turns the academic page into a site of aesthetic diagnosis. What appears at first to be a stable research article gradually reveals the latent growth of the institutional signs that make it credible.</p>
+
+<section class="trace-box">
+  <h2>Indexing Trace</h2>
+  <div class="trace-grid">
+    <p><span class="trace-term">Primary fragments.</span> <span class="micro">DOI:10.0000/jes.2026.001 · Q1 · SSCI · Scopus · Web of Science · h-index · cited by · accepted manuscript · corrected proof</span></p>
+    <p><span class="trace-term">Citation syntax.</span> <span class="micro">(Slater, 2009; Steuer, 1992; Witmer &amp; Singer, 1998) · et al. · ibid. · pp.45–67 · [1][2][3]</span></p>
+    <p><span class="trace-term">Indexing trace.</span> <span class="micro">Impact factor pending · metadata verified · database record active · cross-reference registered</span></p>
+    <p><span class="trace-term">Visual function.</span> <span class="micro">These abbreviated metadata strings form the textual substrate from which later typographic lesions may emerge.</span></p>
+  </div>
+</section>
+
+<section class="references">
+  <h2>References</h2>
+  <p>Baudrillard, J. (1994). Simulacra and simulation. University of Michigan Press.</p>
+  <p>Haraway, D. (1991). Simians, cyborgs, and women: The reinvention of nature. Routledge.</p>
+  <p>Hayles, N. K. (1999). How we became posthuman: Virtual bodies in cybernetics, literature, and informatics. University of Chicago Press.</p>
+  <p>Hansen, M. B. N. (2006). Bodies in code: Interfaces with digital media. Routledge.</p>
+  <p>Kwon, M. (2002). One place after another: Site-specific art and locational identity. MIT Press.</p>
+  <p>Lombard, M., &amp; Ditton, T. (1997). At the heart of it all: The concept of presence. Journal of Computer-Mediated Communication, 3(2).</p>
+  <p>Manovich, L. (2001). The language of new media. MIT Press.</p>
+  <p>Parikka, J. (2012). What is media archaeology? Polity Press.</p>
+  <p>Slater, M. (2009). Place illusion and plausibility can lead to realistic behaviour in immersive virtual environments. Philosophical Transactions of the Royal Society B, 364(1535), 3549–3557.</p>
+  <p>Steuer, J. (1992). Defining virtual reality: Dimensions determining telepresence. Journal of Communication, 42(4), 73–93.</p>
+  <p>Witmer, B. G., &amp; Singer, M. J. (1998). Measuring presence in virtual environments: A presence questionnaire. Presence: Teleoperators and Virtual Environments, 7(3), 225–240.</p>
+  <p>Lei, Z. (2026). Citation hyperplasia: A growing academic tumour. Fictional Journal of Experiential Simulation, 1(1), 1–9.</p>
+  <p>Lei, Z., &amp; Zhou, W. (2026). Experiential simulation and the measurable body in location-based virtual reality. Unpublished manuscript.</p>
+</section>
+
+</article>
+
+</main>
+</div>
+<script>
+(() => {
+  const seed = 9172026;
+  const glyphs = [
+    "[", "]", "(", ")", "{", "}", "<", ">", "/", "\\", "|", "_", "-", "+", "*",
+    "0", "1", "2", "3", "5", "7", "8", "9", ";", ":", ".", ",", "'", "\"",
+    "doi", "[12]", "[3]", "DOI", "et al.", "pp.", "Q1", "SSCI", "h-index", "cited by"
+  ];
+  const residueGlyphs = [
+    "[", "]", "(", ")", "{", "}", "<", ">", "/", "\\", "|", "_", "-", "+",
+    "0", "1", "3", "7", "8", ";", ".", ",", "'", "\"", ":",
+    "doi", "[12]", "[3]", "DOI", "et al.", "pp.", "Q1", "SSCI", "h-index", "cited by"
+  ];
+  const palette = [
+    "rgba(8,7,6,.64)", "rgba(16,14,12,.60)", "rgba(28,24,20,.56)",
+    "rgba(48,41,34,.50)", "rgba(52,43,58,.50)", "rgba(74,64,47,.45)",
+    "rgba(91,92,54,.40)", "rgba(30,94,104,.35)", "rgba(96,52,88,.34)"
+  ];
+
+  function mulberry32(a) {
+    return function random() {
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ t >>> 15, t | 1);
+      t ^= t + Math.imul(t ^ t >>> 7, t | 61);
+      return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    };
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function pick(rng, list) {
+    return list[Math.floor(rng() * list.length)];
+  }
+
+  function setVars(element, vars) {
+    Object.entries(vars).forEach(([key, value]) => {
+      element.style.setProperty(key, value);
+    });
+  }
+
+  function buildReferenceMildew() {
+    const refs = document.querySelector(".references");
+    if (!refs || refs.querySelector(".reference-mildew")) return;
+
+    const rng = mulberry32(seed + 4417);
+    const layer = document.createElement("div");
+    layer.className = "reference-mildew";
+    layer.setAttribute("aria-hidden", "true");
+
+    const clusters = [
+      { x: 7, y: 13, w: 27, h: 15, a: -1.0, density: .70, clot: .64, spores: .82, glyphs: .64 },
+      { x: 42, y: 25, w: 38, h: 20, a: 2.0, density: .59, clot: .36, spores: .92, glyphs: .72 },
+      { x: 20, y: 49, w: 39, h: 26, a: -4.0, density: .86, clot: .86, spores: .76, glyphs: .54 },
+      { x: 58, y: 66, w: 27, h: 18, a: 4.8, density: .55, clot: .42, spores: .64, glyphs: .88 },
+      { x: 11, y: 81, w: 22, h: 13, a: -2.4, density: .44, clot: .29, spores: .68, glyphs: .58 },
+      { x: 72, y: 41, w: 16, h: 16, a: 1.7, density: .36, clot: .15, spores: .88, glyphs: .36 }
+    ];
+
+    clusters.forEach((cluster, index) => {
+      const spores = Math.round(4 + cluster.density * 9 * cluster.spores);
+      const sporeGlyphs = [".", ",", ":", ";", "[", "]", "(", ")", "0", "1", "3", "7", "pp.", "doi"];
+      for (let i = 0; i < spores; i++) {
+        const el = document.createElement("span");
+        el.className = "mildew-spore";
+        el.textContent = pick(rng, sporeGlyphs);
+        const spread = Math.pow(rng(), .70);
+        setVars(el, {
+          "--mx": `${cluster.x + (rng() - .36) * cluster.w * spread}%`,
+          "--my": `${cluster.y + (rng() - .5) * cluster.h * 1.15}%`,
+          "--ms": `${1.9 + Math.pow(rng(), 1.65) * (3.8 + cluster.spores * 2.6)}px`,
+          "--ma": `${(.065 + rng() * .13).toFixed(2)}`,
+          "--mo": `${(.30 + rng() * .22).toFixed(2)}`,
+          "--mb": `${(.08 + rng() * .25).toFixed(2)}px`,
+          "--mr": `${(rng() - .5) * 160}deg`,
+          "--mss": `${(.70 + rng() * .95).toFixed(2)}`,
+          "--mls": `${(-.06 + rng() * .16).toFixed(2)}px`,
+          "--mwgt": `${rng() > .82 ? 700 : 480}`,
+          "--mt": `${22 + rng() * 18}s`
+        });
+        layer.appendChild(el);
+      }
+
+      const dots = Math.round(34 + cluster.density * 72);
+      for (let i = 0; i < dots; i++) {
+        const el = document.createElement("span");
+        el.className = "mildew-dot";
+        const spread = Math.pow(rng(), .62);
+        const dustTail = rng() > .68 ? 1.35 + rng() * .75 : 1;
+        setVars(el, {
+          "--mx": `${cluster.x + (rng() - .32) * cluster.w * spread * dustTail}%`,
+          "--my": `${cluster.y + (rng() - .5) * cluster.h * (1.3 + cluster.density)}%`,
+          "--ms": `${.34 + Math.pow(rng(), 2.20) * 2.05}px`,
+          "--ma": `${(.045 + rng() * .20).toFixed(2)}`,
+          "--mb": `${(rng() * .54).toFixed(2)}px`
+        });
+        layer.appendChild(el);
+      }
+
+      const glyphsLocal = [
+        "[", "]", "(", ")", "0", "1", "3", "7", ".", ":", ";"
+      ];
+      const glyphCount = Math.round(3 + cluster.density * 7 * cluster.glyphs);
+      for (let i = 0; i < glyphCount; i++) {
+        const el = document.createElement("span");
+        el.className = "mildew-glyph";
+        const text = pick(rng, glyphsLocal);
+        const isLong = text.length > 3;
+        el.textContent = text;
+        setVars(el, {
+          "--mx": `${cluster.x + (rng() - .42) * cluster.w}%`,
+          "--my": `${cluster.y + (rng() - .5) * cluster.h * 1.18}%`,
+          "--mfz": `${(isLong ? 1.8 : 2.2) + Math.pow(rng(), 1.75) * (isLong ? 3.5 : 5.2)}px`,
+          "--mr": `${(rng() - .5) * 98}deg`,
+          "--ma": `${(.075 + rng() * (isLong ? .18 : .24)).toFixed(2)}`,
+          "--mb": `${(rng() * .34).toFixed(2)}px`,
+          "--mwgt": `${rng() > .78 ? 700 : 480}`
+        });
+        layer.appendChild(el);
+      }
+
+    });
+
+    refs.appendChild(layer);
+  }
+
+  function wrapTextNode(node, intensity, rng, pullVector = { x: 0, y: 0 }, options = {}) {
+    const source = node.nodeValue;
+    if (!source || !source.trim()) return;
+
+    const fragment = document.createDocumentFragment();
+    for (const char of source) {
+      if (!char.trim() || rng() > intensity) {
+        fragment.appendChild(document.createTextNode(char));
+        continue;
+      }
+
+      const span = document.createElement("span");
+      span.className = "infected-char";
+      span.textContent = char;
+
+      const severity = clamp((intensity - .025) / .39, 0, 1);
+      const directed = Math.pow(severity, 1.22) * (options.vectorStrength || 1);
+      const reach = 1.7 + severity * (options.chaotic ? 22 : 15);
+      const tangent = rng() > .5 ? 1 : -1;
+      const swirlX = -pullVector.y * tangent;
+      const swirlY = pullVector.x * tangent;
+      const dx = pullVector.x * reach * directed * .74 + swirlX * reach * directed * .22 + (rng() - .5) * reach * (1 - directed * .42);
+      const dy = pullVector.y * reach * directed * .74 + swirlY * reach * directed * .22 + (rng() - .5) * reach * (1.00 + severity * .38) * (1 - directed * .36);
+      const directionalRot = Math.atan2(pullVector.y, pullVector.x) * 24;
+      const rot = directionalRot * directed + (rng() - .5) * (14 + severity * (options.chaotic ? 185 : 128));
+      const scale = 1 + rng() * (.09 + severity * (options.chaotic ? .70 : .48));
+      const colorRoll = rng();
+      const color =
+        colorRoll > .982 ? "rgba(18,104,115,.92)" :
+        colorRoll > .960 ? "rgba(96,47,79,.88)" :
+        colorRoll > .930 ? "rgba(86,85,38,.88)" :
+        "rgba(" + Math.floor(6 + rng() * (34 - severity * 12)) + "," + Math.floor(5 + rng() * (27 - severity * 9)) + "," + Math.floor(4 + rng() * (28 - severity * 10)) + ",.98)";
+
+      span.style.setProperty("--lesion-dx", dx.toFixed(2) + "px");
+      span.style.setProperty("--lesion-dy", dy.toFixed(2) + "px");
+      span.style.setProperty("--lesion-rot", rot.toFixed(2) + "deg");
+      span.style.setProperty("--lesion-scale", scale.toFixed(3));
+      span.style.setProperty("--lesion-delay", (-rng() * 12).toFixed(2) + "s");
+      span.style.setProperty("--lesion-speed", (11.5 + rng() * 8.5).toFixed(2) + "s");
+      span.style.setProperty("--lesion-color", color);
+      span.style.setProperty("--lesion-weight", rng() > (.60 - severity * .18) ? "900" : "700");
+      span.style.setProperty("--lesion-shadow", (rng() * (.7 + severity * 2.9)).toFixed(2) + "px");
+      span.style.setProperty("--lesion-smear-x", ((pullVector.x * severity * 2.6) + (rng() - .5) * (.8 + severity * 3.1)).toFixed(2) + "px");
+      span.style.setProperty("--lesion-smear-y", ((pullVector.y * severity * 2.6) + (rng() - .5) * (.8 + severity * 3.1)).toFixed(2) + "px");
+      span.style.setProperty("--lesion-blur", (rng() * (.12 + severity * .74)).toFixed(2) + "px");
+      fragment.appendChild(span);
+    }
+
+    node.parentNode.replaceChild(fragment, node);
+  }
+
+  function infectElementText(element, intensity, rng, pullVector, options) {
+    element.classList.add("infection-host");
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT, {
+      acceptNode(node) {
+        if (!node.nodeValue || !node.nodeValue.trim()) return NodeFilter.FILTER_REJECT;
+        if (node.parentElement && node.parentElement.closest(".infected-char")) return NodeFilter.FILTER_REJECT;
+        return NodeFilter.FILTER_ACCEPT;
+      }
+    });
+
+    const nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach((node) => wrapTextNode(node, intensity, rng, pullVector, options));
+  }
+
+  function cubic(a, b, c, d, t) {
+    const mt = 1 - t;
+    return mt * mt * mt * a + 3 * mt * mt * t * b + 3 * mt * t * t * c + t * t * t * d;
+  }
+
+  function relativeRect(element, root) {
+    const a = element.getBoundingClientRect();
+    const b = root.getBoundingClientRect();
+    return {
+      left: a.left - b.left,
+      top: a.top - b.top,
+      width: a.width,
+      height: a.height,
+      right: a.right - b.left,
+      bottom: a.bottom - b.top
+    };
+  }
+
+  function curveBounds(item) {
+    const xs = [item.x0, item.x1, item.x2, item.x3].filter(Number.isFinite);
+    const ys = [item.y0, item.y1, item.y2, item.y3].filter(Number.isFinite);
+    if (!xs.length || !ys.length) {
+      return { left: Infinity, right: -Infinity, top: Infinity, bottom: -Infinity };
+    }
+    return {
+      left: Math.min(...xs),
+      right: Math.max(...xs),
+      top: Math.min(...ys),
+      bottom: Math.max(...ys)
+    };
+  }
+
+  function boot() {
+    const paper = document.querySelector(".paper");
+    const canvas = document.getElementById("lesionCanvas");
+    const interactionCanvas = document.getElementById("interactionCanvas");
+    const interactiveObject = document.getElementById("interactiveObject");
+    const interactiveObjectImg = document.getElementById("interactiveObjectImg");
+    const organism = document.querySelector(".lesion-organism");
+    if (!paper || !canvas || !interactionCanvas) return;
+
+    const rng = mulberry32(seed);
+    const lateParagraphs = Array.from(document.querySelectorAll(".article > p")).slice(12);
+    const infectionTargets = [
+      ...lateParagraphs,
+      ...document.querySelectorAll(".trace-box .micro"),
+      ...document.querySelectorAll(".references p")
+    ].filter(Boolean);
+    let infectionPrepared = false;
+
+    const ctx = canvas.getContext("2d", { alpha: true });
+    const interactionCtx = interactionCanvas.getContext("2d", { alpha: true });
+    let width = 0;
+    let height = 0;
+    let dpr = 1;
+    let viewBounds = { left: 0, right: 0, top: 0, bottom: 0 };
+    let body = null;
+    let nuclei = [];
+    let clots = [];
+    let residues = [];
+    let edgeCrumbs = [];
+    let contactScars = [];
+    let expelledWaste = [];
+    let lowerRightResidue = [];
+    let absorbedFragments = [];
+    let swallowStreams = [];
+    let upperBridgeParticles = [];
+    let mutationSheets = [];
+    let mutationRopes = [];
+    let spiderWebs = [];
+    let tendrils = [];
+    let lifeMotes = [];
+    let interactionBursts = [];
+    let instantBursts = [];
+    let instantFrameRunning = false;
+    let instantFrameLast = 0;
+    let anchors = [];
+    let pointer = { x: 0, y: 0, active: false, heat: 0, tapHeat: 0, pressHeat: 0, wetHeat: 0, longSignalHeat: 0, down: false, downActive: false, downStrength: 0, releaseHeat: 0, pointerId: null, longPress: false, downAt: 0, touchX: 0, touchY: 0, immediateTouch: false };
+    let pressTimer = 0;
+    let stressTimer = 0;
+    let consumeTimer = 0;
+    let releaseStressTimer = 0;
+    let stressSerial = 0;
+    let scrollSettle = 0;
+    let scrollTimer = 0;
+    let frameToggle = 0;
+    let lastBurstAt = 0;
+    let lastHoldAbsorbAt = 0;
+    let interactionPriorityUntil = 0;
+    let interactiveObjectActive = false;
+    let interactiveObjectTimer = 0;
+    let imprintFrameRunning = false;
+    const imprintState = {
+      active: false,
+      start: 0,
+      duration: 8000,
+      x: 0,
+      y: 0,
+      size: 0,
+      baseRot: 0,
+      phaseA: 0,
+      phaseB: 0,
+      phaseC: 0,
+      nextSeepAt: 0,
+      seepBursts: 0
+    };
+    let last = 0;
+    let currentBreath = { breath: 0, organ: 0, membrane: 0, ingest: 0, digest: 0, expel: 0, rest: 0, phase: 0 };
+    let upperPlumeDensity = .52;
+    let organReflex = 0;
+    let animationStartedAt = performance.now();
+    const canvasDprCap = 1;
+    const idleFrameMs = 66;
+    const interactionFrameMs = 50;
+    const instantFrameMs = 33;
+    let drawFpsLast = 0;
+    let drawFpsSamples = [];
+    let drawFrameCount = 0;
+    let mutatedDomSpanCount = 0;
+    let animatedDomSpanCount = 0;
+    const urlParams = new URLSearchParams(window.location.search);
+    const debugMode = urlParams.has("debug");
+    const debugState = {
+      pointerdownDetected: false,
+      immediateTouchFeedback: false,
+      longPressTriggered: false,
+      holdAbsorptionTriggered: false,
+      releaseDetected: false,
+      releaseWasteTriggered: false,
+      pointercancelDetected: false,
+      holdBurstCount: 0,
+      pointerdownCount: 0,
+      releaseCount: 0,
+      pointercancelCount: 0,
+      lastEvent: "none",
+      lastEventAt: 0
+    };
+    let perfHud = null;
+    if (debugMode) {
+      perfHud = document.createElement("div");
+      perfHud.className = "perf-hud";
+      perfHud.textContent = "FPS --";
+      document.body.appendChild(perfHud);
+    }
+
+    function debugPointerSnapshot() {
+      return {
+        x: Number(pointer.x.toFixed(1)),
+        y: Number(pointer.y.toFixed(1)),
+        active: pointer.active,
+        down: pointer.down,
+        downActive: pointer.downActive,
+        downStrength: Number(pointer.downStrength.toFixed(3)),
+        releaseHeat: Number(pointer.releaseHeat.toFixed(3)),
+        pointerId: pointer.pointerId,
+        longPress: pointer.longPress,
+        organReflex: Number(organReflex.toFixed(3)),
+        stress: paper.classList.contains("is-touch-stressed"),
+        consuming: paper.classList.contains("is-consuming"),
+        releasing: paper.classList.contains("is-releasing")
+      };
+    }
+
+    function debugLog(eventName, details = {}) {
+      if (!debugMode) return;
+      debugState.lastEvent = eventName;
+      debugState.lastEventAt = performance.now();
+      console.log(`[CitationHyperplasia] ${eventName}`, {
+        ...details,
+        pointer: debugPointerSnapshot(),
+        state: { ...debugState }
+      });
+    }
+
+    function setStressPoint(x, y, size = 135) {
+      const rot = ((x / Math.max(1, width)) - .5) * -18 + ((y / Math.max(1, height)) - .5) * 8;
+      paper.style.setProperty("--stress-x", `${x.toFixed(1)}px`);
+      paper.style.setProperty("--stress-y", `${y.toFixed(1)}px`);
+      paper.style.setProperty("--stress-size", `${size.toFixed(1)}px`);
+      paper.style.setProperty("--stress-rot", `${rot.toFixed(2)}deg`);
+    }
+
+    function updateViewBounds() {
+      const rect = paper.getBoundingClientRect();
+      const bufferY = Math.max(220, window.innerHeight * .42);
+      const bufferX = Math.max(140, window.innerWidth * .22);
+      viewBounds = {
+        left: -rect.left - bufferX,
+        right: -rect.left + window.innerWidth + bufferX,
+        top: -rect.top - bufferY,
+        bottom: -rect.top + window.innerHeight + bufferY
+      };
+    }
+
+    function isPointVisible(x, y, margin = 90) {
+      return x >= viewBounds.left - margin &&
+        x <= viewBounds.right + margin &&
+        y >= viewBounds.top - margin &&
+        y <= viewBounds.bottom + margin;
+    }
+
+    function isCurveVisible(item, margin = 120) {
+      const bounds = curveBounds(item);
+      return bounds.right >= viewBounds.left - margin &&
+        bounds.left <= viewBounds.right + margin &&
+        bounds.bottom >= viewBounds.top - margin &&
+        bounds.top <= viewBounds.bottom + margin;
+    }
+
+    function markInteractionPriority(duration = 950) {
+      interactionPriorityUntil = Math.max(interactionPriorityUntil, performance.now() + duration);
+    }
+
+    function showInteractiveObject(x, y) {
+      if (!interactiveObject || !body || interactiveObjectActive) return false;
+      const now = performance.now();
+      interactiveObjectActive = true;
+      if (interactiveObjectTimer) window.clearTimeout(interactiveObjectTimer);
+
+      const size = clamp(body.rx * .56, 92, 128);
+      const baseRot = ((x / Math.max(1, width)) - .5) * 16;
+      pointer.touchX = x;
+      pointer.touchY = y;
+      interactiveObject.style.setProperty("--interactive-x", `${x.toFixed(1)}px`);
+      interactiveObject.style.setProperty("--interactive-y", `${y.toFixed(1)}px`);
+      interactiveObject.style.setProperty("--interactive-size", `${size.toFixed(1)}px`);
+      interactiveObject.style.setProperty("--interactive-rot", `${baseRot.toFixed(2)}deg`);
+      interactiveObject.classList.remove("is-visible");
+      void interactiveObject.offsetWidth;
+      interactiveObject.classList.add("is-visible");
+
+      imprintState.active = true;
+      imprintState.start = now;
+      imprintState.duration = 8000;
+      imprintState.x = x;
+      imprintState.y = y;
+      imprintState.size = size;
+      imprintState.baseRot = baseRot;
+      imprintState.phaseA = Math.random() * Math.PI * 2;
+      imprintState.phaseB = Math.random() * Math.PI * 2;
+      imprintState.phaseC = Math.random() * Math.PI * 2;
+      imprintState.nextSeepAt = now + 520 + Math.random() * 1050;
+      imprintState.seepBursts = 0;
+      startImprintFrame();
+
+      interactiveObjectTimer = window.setTimeout(() => {
+        clearInteractiveObject();
+      }, 8100);
+      triggerImprintOrganResponse(x, y);
+      return true;
+    }
+
+    function clearInteractiveObject() {
+      interactiveObject.classList.remove("is-visible");
+      interactiveObjectActive = false;
+      imprintState.active = false;
+      if (interactiveObjectImg) {
+        interactiveObjectImg.style.transform = `rotate(${imprintState.baseRot.toFixed(2)}deg) scale(1)`;
+        interactiveObjectImg.style.filter = "contrast(.94) saturate(.76) brightness(1.05)";
+      }
+    }
+
+    function startImprintFrame() {
+      if (imprintFrameRunning) return;
+      imprintFrameRunning = true;
+      requestAnimationFrame(updateImprintFrame);
+    }
+
+    function updateImprintFrame(time) {
+      if (!imprintState.active || !interactiveObjectImg) {
+        imprintFrameRunning = false;
+        return;
+      }
+
+      const elapsed = time - imprintState.start;
+      const progress = clamp(elapsed / imprintState.duration, 0, 1);
+      const living = Math.sin(time * .00155 + imprintState.phaseA) * .55 +
+        Math.sin(time * .00082 + imprintState.phaseB) * .32 +
+        Math.sin(time * .00235 + imprintState.phaseC) * .13;
+      const deepWet = .5 + Math.sin(time * .00105 + imprintState.phaseC) * .24 +
+        Math.sin(time * .00048 + imprintState.phaseB) * .14;
+      const lateQuiet = 1 - Math.pow(progress, 1.8) * .36;
+      const microScale = 1 + living * .026 * lateQuiet + Math.sin(time * .00062 + imprintState.phaseB) * .010;
+      const microRot = imprintState.baseRot + living * .82 + Math.sin(time * .0012 + imprintState.phaseC) * .22;
+      const wet = clamp(deepWet, 0, 1);
+      const contrast = .92 + wet * .16;
+      const saturation = .68 + wet * .20;
+      const brightness = 1.08 - wet * .10;
+
+      interactiveObjectImg.style.transform = `rotate(${microRot.toFixed(3)}deg) scale(${microScale.toFixed(4)})`;
+      interactiveObjectImg.style.filter = `contrast(${contrast.toFixed(3)}) saturate(${saturation.toFixed(3)}) brightness(${brightness.toFixed(3)})`;
+
+      if (time >= imprintState.nextSeepAt && progress < .82 && imprintState.seepBursts < 5) {
+        spawnImprintFragments(imprintState.x, imprintState.y, imprintState.size, 2 + Math.floor(Math.random() * 3));
+        imprintState.seepBursts += 1;
+        imprintState.nextSeepAt = time + 760 + Math.random() * 1500;
+      }
+
+      if (progress >= 1) {
+        clearInteractiveObject();
+        imprintFrameRunning = false;
+        return;
+      }
+
+      requestAnimationFrame(updateImprintFrame);
+    }
+
+    function spawnImprintFragments(x, y, size, count = 3) {
+      const glyphList = ["[12]", "DOI", "et al.", "pp.", "Q1", "SSCI", "h-index", "cited by", "[", "]", "0", "1"];
+      const start = performance.now();
+      const towardBody = body ? Math.atan2(body.y - y, body.x - x) : -Math.PI / 2;
+      for (let i = 0; i < count; i++) {
+        const base = Math.random() * Math.PI * 2;
+        const angle = Math.random() > .55 ? towardBody + (Math.random() - .5) * 1.15 : base;
+        const edge = size * (.24 + Math.random() * .22);
+        const dist = size * (.12 + Math.random() * .34);
+        const sx = x + Math.cos(base) * edge * (1 + (Math.random() - .5) * .18);
+        const sy = y + Math.sin(base) * edge * .72;
+        instantBursts.push({
+          x0: sx,
+          y0: sy,
+          x1: sx + Math.cos(angle) * dist * .28 + (Math.random() - .5) * 6,
+          y1: sy + Math.sin(angle) * dist * .18 + (Math.random() - .5) * 5,
+          x2: sx + Math.cos(angle) * dist * .70 + (Math.random() - .5) * 9,
+          y2: sy + Math.sin(angle) * dist * .50 + (Math.random() - .5) * 7,
+          x3: sx + Math.cos(angle) * dist,
+          y3: sy + Math.sin(angle) * dist * .78,
+          char: glyphList[Math.floor(Math.random() * glyphList.length)],
+          start,
+          duration: 1800 + Math.random() * 1500,
+          alpha: .045 + Math.random() * .060,
+          size: 1.05 + Math.random() * 1.85,
+          rot: (Math.random() - .5) * Math.PI,
+          spin: (Math.random() - .5) * .16
+        });
+      }
+      if (instantBursts.length > 42) instantBursts.splice(0, instantBursts.length - 42);
+      lastBurstAt = start;
+      startInstantFrame();
+    }
+
+    function triggerImprintOrganResponse(x, y) {
+      if (!body) return;
+      const dx = (x - body.x) / (body.rx * 1.55);
+      const dy = (y - body.y) / (body.ry * 1.45);
+      const near = clamp(1 - (dx * dx + dy * dy), 0, 1);
+      if (near <= .04) return;
+      pointer.tapHeat = clamp(pointer.tapHeat + .06 + near * .08, 0, 1);
+      pointer.pressHeat = clamp(pointer.pressHeat + .025 + near * .045, 0, 1);
+      pointer.wetHeat = clamp(pointer.wetHeat + .08 + near * .12, 0, 1);
+      organReflex = clamp(organReflex + .035 + near * .08, 0, 1);
+    }
+
+    function clearStressClasses() {
+      paper.classList.remove("is-touch-stressed", "is-consuming", "is-releasing");
+    }
+
+    function triggerInteractionStress(kind, x, y) {
+      if (!body) return;
+      if (stressTimer) window.clearTimeout(stressTimer);
+      if (consumeTimer) window.clearTimeout(consumeTimer);
+      if (releaseStressTimer) window.clearTimeout(releaseStressTimer);
+
+      const size =
+        kind === "consume" ? body.rx * .30 :
+        kind === "release" ? body.rx * .34 :
+        body.rx * .13;
+      setStressPoint(x, y, size);
+      clearStressClasses();
+      const serial = ++stressSerial;
+
+      requestAnimationFrame(() => {
+        if (serial !== stressSerial) return;
+        if (kind === "consume") {
+          paper.classList.add("is-consuming");
+          consumeTimer = window.setTimeout(() => {
+            paper.classList.remove("is-consuming");
+          }, 1500);
+        } else if (kind === "release") {
+          paper.classList.add("is-releasing");
+          releaseStressTimer = window.setTimeout(() => {
+            paper.classList.remove("is-releasing");
+          }, 2400);
+        } else {
+          paper.classList.add("is-touch-stressed");
+          stressTimer = window.setTimeout(() => {
+            paper.classList.remove("is-touch-stressed");
+          }, 1080);
+        }
+      });
+    }
+
+    window.__lesionStats = {
+      canvasParticles: 0,
+      animatedDomSpans: 0,
+      drawFps: 0,
+      drawFpsAverage: 0,
+      drawFrameCount: 0
+    };
+
+    function publishStats() {
+      const canvasParticles =
+        nuclei.length + clots.length + residues.length + edgeCrumbs.length + contactScars.length +
+        expelledWaste.length + lowerRightResidue.length +
+        absorbedFragments.length +
+        swallowStreams.reduce((sum, stream) => sum + stream.fragments.length + 1, 0) +
+        upperBridgeParticles.length +
+        lifeMotes.length +
+        interactionBursts.length +
+        instantBursts.length +
+        mutationSheets.reduce((sum, sheet) => sum + sheet.cells.length, 0) +
+        mutationRopes.reduce((sum, rope) => sum + Math.round(18 + rope.density * 22), 0) +
+        spiderWebs.reduce((sum, web) => sum + web.nodes.length, 0) +
+        tendrils.reduce((sum, tendril) => sum + Math.max(10, Math.round(58 / (tendril.glyphStep / 16))) + 4, 0);
+      const drawFpsAverage = drawFpsSamples.length
+        ? drawFpsSamples.reduce((sum, value) => sum + value, 0) / drawFpsSamples.length
+        : 0;
+      window.__lesionStats = {
+        canvasParticles,
+        nuclei: nuclei.length,
+        clots: clots.length,
+        residues: residues.length,
+        edgeCrumbs: edgeCrumbs.length,
+        contactScars: contactScars.length,
+        expelledWaste: expelledWaste.length,
+        lowerRightResidue: lowerRightResidue.length,
+        absorbedFragments: absorbedFragments.length,
+        swallowStreams: swallowStreams.length,
+        upperBridgeParticles: upperBridgeParticles.length,
+        lifeMotes: lifeMotes.length,
+        interactionBursts: interactionBursts.length,
+        instantBursts: instantBursts.length,
+        mutationSheets: mutationSheets.length,
+        mutationRopes: mutationRopes.length,
+        spiderWebs: spiderWebs.length,
+        tendrils: tendrils.length,
+        mutatedDomSpans: mutatedDomSpanCount,
+        animatedDomSpans: animatedDomSpanCount,
+        drawFps: drawFpsLast,
+        drawFpsAverage,
+        drawFrameCount,
+        canvasDpr: dpr,
+        canvasPixels: Math.round(canvas.width * canvas.height),
+        metabolism: {
+          phase: Number(currentBreath.phase.toFixed(3)),
+          breath: Number(currentBreath.breath.toFixed(3)),
+          organ: Number(currentBreath.organ.toFixed(3)),
+          ingest: Number(currentBreath.ingest.toFixed(3)),
+          digest: Number(currentBreath.digest.toFixed(3)),
+          expel: Number(currentBreath.expel.toFixed(3)),
+          upperPlumeDensity: Number(upperPlumeDensity.toFixed(3))
+        },
+        pointer: debugPointerSnapshot(),
+        debug: { ...debugState }
+      };
+      if (perfHud) {
+        if (urlParams.has("debug")) {
+          const p = debugPointerSnapshot();
+          perfHud.textContent = [
+            `FPS ${drawFpsLast.toFixed(1)} | avg ${drawFpsAverage.toFixed(1)}`,
+            `particles ${canvasParticles}`,
+            `instant ${instantBursts.length}`,
+            `canvas dpr ${dpr.toFixed(2)} | pixels ${Math.round(canvas.width * canvas.height / 1000)}k`,
+            `metabolism b${currentBreath.breath.toFixed(2)} d${currentBreath.digest.toFixed(2)} e${currentBreath.expel.toFixed(2)}`,
+            `pointer ${p.x}, ${p.y}`,
+            `active ${p.active} | down ${p.down} | downActive ${p.downActive}`,
+            `strength ${p.downStrength} | releaseHeat ${p.releaseHeat}`,
+            `longPress ${p.longPress}`,
+            `pointerdown ${debugState.pointerdownDetected} (${debugState.pointerdownCount})`,
+            `immediate ${debugState.immediateTouchFeedback}`,
+            `hold bursts ${debugState.holdBurstCount}`,
+            `release waste ${debugState.releaseWasteTriggered}`,
+            `cancel ${debugState.pointercancelDetected} (${debugState.pointercancelCount})`,
+            `last ${debugState.lastEvent}`
+          ].join("\n");
+        } else {
+          perfHud.textContent = `FPS ${drawFpsLast.toFixed(1)} | particles ${canvasParticles}`;
+        }
+      }
+    }
+
+    function makeAnchorSet() {
+      const selected = [
+        ...document.querySelectorAll(".trace-box .micro"),
+        ...document.querySelectorAll(".references p"),
+        ...lateParagraphs
+      ].filter(Boolean);
+
+      return selected.map((element, index) => {
+        const rect = relativeRect(element, paper);
+        const side = index % 3;
+        return {
+          x: side === 0 ? rect.left + rect.width * .12 : side === 1 ? rect.left + rect.width * .62 : rect.right - rect.width * .1,
+          y: rect.top + rect.height * (.28 + (index % 5) * .12),
+          strength: .7 + (index % 6) * .08
+        };
+      });
+    }
+
+    function inHole(x, y, holes) {
+      for (const hole of holes) {
+        const dx = (x - hole.x) / hole.rx;
+        const dy = (y - hole.y) / hole.ry;
+        if (dx * dx + dy * dy < 1) return true;
+      }
+      return false;
+    }
+
+    function smoothStep(edge0, edge1, value) {
+      const t = clamp((value - edge0) / (edge1 - edge0), 0, 1);
+      return t * t * (3 - 2 * t);
+    }
+
+    function getBreathState(time, activity = 1) {
+      const cycle = 34000;
+      const phase = (((time - animationStartedAt) / cycle) + .36) % 1;
+      const inhale = smoothStep(.08, .40, phase);
+      const held = 1 - smoothStep(.54, .70, phase);
+      const organ = clamp(inhale * held, .075, 1) * activity;
+      const digest = Math.pow(
+        smoothStep(.34, .62, phase) * (1 - smoothStep(.76, .94, phase)),
+        1.35
+      ) * activity;
+      const ingest = Math.pow(
+        smoothStep(.22, .46, phase) * (1 - smoothStep(.58, .76, phase)),
+        1.22
+      ) * activity;
+      const membrane = clamp(.09 + organ * .36 + digest * .36, 0, 1) * activity;
+      const expel = Math.pow(
+        smoothStep(.66, .86, phase) * (1 - smoothStep(.94, 1, phase)),
+        1.2
+      ) * activity;
+      const rest = clamp(smoothStep(.84, .98, phase) + (1 - smoothStep(.00, .10, phase)), 0, 1);
+      return {
+        phase,
+        breath: clamp(.095 + organ * .45 + digest * .23 + expel * .06, 0, .72),
+        organ,
+        membrane,
+        ingest,
+        digest,
+        expel,
+        rest
+      };
+    }
+
+    function getStartupEase(time) {
+      return smoothStep(900, 7200, time - animationStartedAt);
+    }
+
+    function markDigestiveHoles() {
+      if (!body || !body.holes.length) return;
+      body.holes.forEach((hole) => {
+        hole.primary = false;
+        hole.primaryOrder = 0;
+      });
+      body.holes
+        .map((hole) => {
+          const dx = (hole.x - body.x) / body.rx;
+          const dy = (hole.y - body.y) / body.ry;
+          const centrality = clamp(1 - dx * dx - dy * dy, 0, 1);
+          return { hole, score: (hole.rx + hole.ry) * (1 + centrality * 1.9) };
+        })
+        .sort((a, b) => b.score - a.score)
+        .slice(0, 5)
+        .forEach(({ hole }, index) => {
+          hole.primary = true;
+          hole.primaryOrder = index;
+          hole.metabolicPhase = index * .78;
+        });
+    }
+
+    function getDigestiveTarget(x, y) {
+      if (!body) return { x, y };
+      const primary = body.holes.filter((hole) => hole.primary);
+      if (!primary.length) return { x: body.x, y: body.y };
+      let chosen = primary[0];
+      let best = Infinity;
+      for (const hole of primary) {
+        const dx = x - hole.x;
+        const dy = y - hole.y;
+        const distance = dx * dx + dy * dy;
+        if (distance < best) {
+          best = distance;
+          chosen = hole;
+        }
+      }
+      return {
+        x: chosen.x + (Math.random() - .5) * chosen.rx * .36,
+        y: chosen.y + (Math.random() - .5) * chosen.ry * .36,
+        hole: chosen
+      };
+    }
+
+    function buildScene() {
+      const trace = document.querySelector(".trace-box");
+      const refs = document.querySelector(".references");
+      const traceRect = trace ? relativeRect(trace, paper) : { top: height * .63, bottom: height * .70, left: width * .1, right: width * .9 };
+      const refsRect = refs ? relativeRect(refs, paper) : { top: height * .72, bottom: height * .96, left: width * .08, right: width * .92 };
+
+      body = {
+        x: width * .64,
+        y: clamp((traceRect.bottom + refsRect.top + refsRect.bottom) / 3 + height * .025, height * .62, height * .86),
+        rx: width * .235,
+        ry: height * .158,
+        holes: []
+      };
+
+      const localRng = mulberry32(seed + Math.round(width + height));
+      const holeCount = 16;
+      for (let i = 0; i < holeCount; i++) {
+        const angle = localRng() * Math.PI * 2;
+        const radius = Math.pow(localRng(), .66);
+        body.holes.push({
+          x: body.x + Math.cos(angle) * body.rx * radius * .76 + (localRng() - .5) * 28,
+          y: body.y + Math.sin(angle) * body.ry * radius * .90 + (localRng() - .5) * 36,
+          rx: 7 + localRng() * 24,
+          ry: 6 + localRng() * 22,
+          phase: localRng() * Math.PI * 2,
+          darkPhase: localRng() * Math.PI * 2,
+          darkSpeed: (Math.PI * 2) / (8500 + localRng() * 6500)
+        });
+      }
+      markDigestiveHoles();
+
+      nuclei = [];
+      const count = Math.round(clamp(width * height / 6700, 205, 335));
+      let guard = 0;
+      while (nuclei.length < count && guard < count * 7) {
+        guard++;
+        const angle = localRng() * Math.PI * 2;
+        const radius = Math.pow(localRng(), .43);
+        const warp = 1 + Math.sin(angle * 3.1 + localRng() * 2) * .18 + Math.cos(angle * 5.7) * .12;
+        const x = body.x + Math.cos(angle) * body.rx * radius * warp + (localRng() - .5) * 34;
+        const y = body.y + Math.sin(angle) * body.ry * radius * (1 + Math.sin(angle * 2.4) * .18) + (localRng() - .5) * 44;
+        const dx = (x - body.x) / body.rx;
+        const dy = (y - body.y) / body.ry;
+        const field = dx * dx + dy * dy;
+        if (field > 1.24 || inHole(x, y, body.holes)) continue;
+        if (field < .50 && localRng() < .94) continue;
+        if (field < .76 && localRng() < .68) continue;
+        const topJetTip = x > body.x + body.rx * .32 && y < body.y - body.ry * .72;
+        if (topJetTip && localRng() < .15) continue;
+        if (x > body.x + body.rx * .62 && y < body.y - body.ry * .35 && field > .68 && localRng() < .38) continue;
+
+        const centerWeight = clamp(1.18 - field, .12, 1);
+        const edgeBias = clamp((field - .46) / .58, .12, 1);
+        const upperRightOuter = x > body.x + body.rx * .45 && y < body.y - body.ry * .25;
+        const upperFungalZone = x > body.x - body.rx * .08 && y < body.y - body.ry * .36;
+        const midSprayColumn = x > body.x - body.rx * .18 && x < body.x + body.rx * .58 && y < body.y - body.ry * .22;
+        const farTopLift = clamp((body.y - body.ry * .54 - y) / (body.ry * .72), 0, 1);
+        const farFromBody = clamp((Math.sqrt((x - body.x) ** 2 + (y - body.y) ** 2) - body.ry * .72) / (body.ry * .92), 0, 1);
+        const farTopLighten = farTopLift * farFromBody;
+        if (upperFungalZone && localRng() < .20) continue;
+        if (midSprayColumn && localRng() < (.20 + farTopLighten * .08)) continue;
+        const blackRoll = localRng();
+        const citationFragments = ["[12]", "[3]", "DOI", "doi:", "et", "al.", "et al.", "pp.", "Q1", "SSCI", "h-index", "2026", "\"", "'", "(", ")", "[", "]", "10."];
+        const rawChar = pick(localRng, centerWeight > .62 ? glyphs : residueGlyphs);
+        const replaceLargeSingle = rawChar.length === 1 && localRng() < (.10 + edgeBias * .08 + (upperFungalZone ? .16 : 0) + (midSprayColumn ? .14 : 0));
+        let char = replaceLargeSingle ? pick(localRng, citationFragments) : rawChar;
+        let charScale = replaceLargeSingle ? .68 : 1;
+        const formRoll = localRng();
+        const form = upperFungalZone
+          ? (formRoll > .62 ? "clot" : formRoll > .25 ? "spore" : "thread")
+          : (formRoll > .84 ? "clot" : formRoll > .70 ? "spore" : formRoll > .58 ? "thread" : "dust");
+        if (upperFungalZone && form !== "thread" && rawChar.length === 1) {
+          char = localRng() > .48 ? pick(localRng, citationFragments) : (localRng() > .48 ? "." : "0");
+          charScale = char.length > 1 ? .70 : 1.02;
+        }
+        nuclei.push({
+          x,
+          y,
+          char,
+          size: (1.30 + Math.pow(localRng(), 2.12) * (centerWeight > .55 ? 4.28 : 3.00)) * charScale * (upperRightOuter ? .58 + centerWeight * .17 : 1) * (topJetTip ? .82 : 1) * (upperFungalZone && form === "clot" ? 1.08 - farTopLighten * .08 : 1) * (.72 + edgeBias * .18) * (midSprayColumn ? .90 : 1) * (1 - farTopLighten * .055),
+          rot: (localRng() - .5) * Math.PI * 2,
+          color: blackRoll > (midSprayColumn ? .94 + farTopLighten * .035 : .88 + farTopLighten * .035) ? pick(localRng, palette.slice(3)) : (midSprayColumn ? `rgba(58,51,43,${(.17 - farTopLighten * .030).toFixed(3)})` : `rgba(56,49,41,${(.20 - farTopLighten * .035).toFixed(3)})`),
+          phase: localRng() * Math.PI * 2,
+          amp: .25 + localRng() * 3.1 * centerWeight,
+          weight: centerWeight * edgeBias * (upperRightOuter ? .36 + centerWeight * .15 : .47) * (topJetTip ? .82 : 1) * (upperFungalZone ? .82 : 1) * (midSprayColumn ? .80 : 1) * (1 - farTopLighten * .14),
+          alphaScale: clamp(.11 + edgeBias * .40, .078, .46) * (topJetTip ? .82 : 1) * (upperFungalZone ? .82 : 1) * (midSprayColumn ? .80 : 1) * (1 - farTopLighten * .18),
+          blur: (localRng() > .76 ? localRng() * (upperRightOuter ? .60 : .86) : localRng() * .16) + farTopLighten * .10,
+          form,
+          plumePeak: upperFungalZone || midSprayColumn || topJetTip,
+          spread: (upperFungalZone ? 1.55 : .8) + localRng() * (upperFungalZone ? 3.7 : 2.8)
+        });
+      }
+
+      upperBridgeParticles = [];
+      const bridgeGlyphs = ["[", "]", "(", ")", ".", ":", "0", "1", "7", "2026", "DOI", "doi", "et", "al.", "et al.", "pp.", "Q1", "SSCI", "h-index"];
+      const bridgeCount = Math.round(clamp(width * height / 36000, 54, 88));
+      for (let i = 0; i < bridgeCount; i++) {
+        const t = localRng();
+        const side = (localRng() - .5) * body.rx * (.74 + t * .62);
+        const lift = body.ry * (.34 + Math.pow(localRng(), .72) * 1.02);
+        const x = body.x + body.rx * (.22 + t * .86) + side * .46 + (localRng() - .5) * 28;
+        const y = body.y - lift + Math.sin(t * Math.PI * 1.35) * body.ry * .18 + (localRng() - .5) * 22;
+        const upperBias = clamp((body.y - y) / (body.ry * 1.42), 0, 1);
+        const outward = clamp((x - body.x) / (body.rx * 1.42), 0, 1);
+        upperBridgeParticles.push({
+          x,
+          y,
+          char: pick(localRng, bridgeGlyphs),
+          size: 1.65 + Math.pow(localRng(), 1.55) * 3.95,
+          rot: (localRng() - .5) * Math.PI * 1.35,
+          phase: localRng() * Math.PI * 2,
+          amp: 1.6 + localRng() * 5.0,
+          drift: .22 + localRng() * .72,
+          blur: .55 + localRng() * 1.15,
+          alpha: .13 + Math.pow(localRng(), 1.35) * .17,
+          upperBias,
+          outward,
+          form: localRng() > .74 ? "soft-clot" : localRng() > .44 ? "fragment" : "dust"
+        });
+      }
+
+      clots = [];
+      const clotGlyphs = ["0", "8", "()", "[]", "{}", "[1]", "[3]", "[12]", "DOI", "doi", "et al.", "pp.", "Q1", "SSCI", "::", "//", "00", "01", "10", "11", ";", ".."];
+      const clotCount = Math.round(clamp(width * height / 56000, 15, 28));
+      for (let i = 0; i < clotCount; i++) {
+        const angle = localRng() * Math.PI * 2;
+        const radius = Math.pow(localRng(), .58);
+        const lobe = 1 + Math.sin(angle * 4.4 + i * .27) * .22;
+        const x = body.x + Math.cos(angle) * body.rx * radius * .78 * lobe + (localRng() - .5) * 36;
+        const y = body.y + Math.sin(angle) * body.ry * radius * .82 * lobe + (localRng() - .5) * 46;
+        if (inHole(x, y, body.holes)) continue;
+        const core = clamp(1 - ((x - body.x) / body.rx) ** 2 - ((y - body.y) / body.ry) ** 2, 0, 1);
+        const field = ((x - body.x) / body.rx) ** 2 + ((y - body.y) / body.ry) ** 2;
+        if (field < .56 && localRng() < .96) continue;
+        if (field < .78 && localRng() < .72) continue;
+        const topJetTip = x > body.x + body.rx * .34 && y < body.y - body.ry * .72;
+        if (topJetTip && localRng() < .16) continue;
+        const upperRightOuter = x > body.x + body.rx * .55 && y < body.y - body.ry * .25 && core < .58;
+        if (upperRightOuter && localRng() < .28) continue;
+        const upperFungalZone = x > body.x - body.rx * .08 && y < body.y - body.ry * .36;
+        const midSprayColumn = x > body.x - body.rx * .18 && x < body.x + body.rx * .58 && y < body.y - body.ry * .22;
+        const farTopLift = clamp((body.y - body.ry * .54 - y) / (body.ry * .72), 0, 1);
+        const farFromBody = clamp((Math.sqrt((x - body.x) ** 2 + (y - body.y) ** 2) - body.ry * .72) / (body.ry * .92), 0, 1);
+        const farTopLighten = farTopLift * farFromBody;
+        if (midSprayColumn && localRng() < (.22 + farTopLighten * .12)) continue;
+        const edgeBias = clamp((field - .52) / .56, .12, 1);
+        const rawClotChar = pick(localRng, clotGlyphs);
+        const clotChar = rawClotChar.length === 1 && localRng() < (.12 + (midSprayColumn ? .18 : 0)) ? pick(localRng, ["[12]", "DOI", "et al.", "Q1", "pp.", "2026"]) : rawClotChar;
+        const form = upperFungalZone ? (localRng() > .38 ? "clot" : "spore") : (localRng() > .54 ? "clot" : localRng() > .38 ? "spore" : "thread");
+        clots.push({
+          x,
+          y,
+          char: clotChar,
+          size: (1.82 + Math.pow(localRng(), 2.62) * 4.15) * (clotChar.length > 1 ? .72 : 1) * (upperRightOuter ? .62 : 1) * (topJetTip ? .80 : 1) * (upperFungalZone ? 1.04 - farTopLighten * .10 : 1) * (.78 + edgeBias * .13) * (midSprayColumn ? .88 : 1) * (1 - farTopLighten * .08),
+          rot: (localRng() - .5) * Math.PI * 1.5,
+          phase: localRng() * Math.PI * 2,
+          amp: .35 + localRng() * 3.4,
+          alpha: (.025 + Math.pow(localRng(), 1.12) * .075) * (upperRightOuter ? .50 : 1) * (topJetTip ? .80 : 1) * (upperFungalZone ? .82 : 1) * (midSprayColumn ? .78 : 1) * (1 - farTopLighten * .20) * edgeBias,
+          core: core * edgeBias,
+          color: localRng() > (midSprayColumn ? .94 + farTopLighten * .04 : .88 + farTopLighten * .04) ? pick(localRng, palette.slice(2)) : (midSprayColumn ? `rgba(54,47,39,${(.15 - farTopLighten * .028).toFixed(3)})` : `rgba(48,41,34,${(.18 - farTopLighten * .032).toFixed(3)})`),
+          form,
+          plumePeak: upperFungalZone || midSprayColumn || topJetTip,
+          spread: 1.0 + localRng() * 3.6
+        });
+      }
+
+      residues = [];
+      for (let i = 0; i < 190; i++) {
+        const angle = localRng() * Math.PI * 2;
+        const radius = .76 + Math.pow(localRng(), .52) * .64;
+        const x = body.x + Math.cos(angle) * body.rx * radius * (1 + Math.sin(angle * 2) * .12);
+        const y = body.y + Math.sin(angle) * body.ry * radius * (1 + Math.cos(angle * 3) * .15);
+        if (y < height * .50 || y > height - 38 || x < 18 || x > width - 18) continue;
+        residues.push({
+          x,
+          y,
+          char: pick(localRng, residueGlyphs),
+          size: 1.05 + Math.pow(localRng(), 1.9) * 3.65,
+          rot: (localRng() - .5) * Math.PI * 2,
+          phase: localRng() * Math.PI * 2,
+          color: localRng() > .94 ? pick(localRng, palette.slice(3)) : "rgba(72,64,51,.17)",
+          amp: localRng() * 1.2
+        });
+      }
+
+      edgeCrumbs = [];
+      const crumbGlyphs = ["[", "]", "(", ")", ".", ",", ":", ";", "0", "1", "7", "/", "pp.", "[3]", "[12]", "DOI", "Q1", "SSCI"];
+      for (let i = 0; i < 226; i++) {
+        const band = localRng();
+        const angle =
+          band < .38 ? Math.PI * (.62 + localRng() * .32) :
+          band < .60 ? Math.PI * (-.06 + localRng() * .30) :
+          band < .88 ? Math.PI * (.90 + localRng() * .42) :
+          Math.PI * (.18 + localRng() * .28);
+        const radius = 1.00 + Math.pow(localRng(), 1.55) * .32;
+        const x = body.x + Math.cos(angle) * body.rx * radius + (localRng() - .5) * 30;
+        const y = body.y + Math.sin(angle) * body.ry * radius + (localRng() - .5) * 36;
+        const field = ((x - body.x) / body.rx) ** 2 + ((y - body.y) / body.ry) ** 2;
+        if (field < .92) continue;
+        edgeCrumbs.push({
+          x,
+          y,
+          char: pick(localRng, crumbGlyphs),
+          size: 1.0 + Math.pow(localRng(), 1.85) * 4.2,
+          rot: (localRng() - .5) * Math.PI * 1.5,
+          phase: localRng() * Math.PI * 2,
+          alpha: .06 + localRng() * (band < .38 || band > .60 ? .28 : .20),
+          amp: .45 + localRng() * 2.0,
+          form: localRng() > .78 ? "clot" : localRng() > .55 ? "thread" : "dust",
+          spread: .7 + localRng() * 2.4
+        });
+      }
+
+      contactScars = [];
+      for (let i = 0; i < 22; i++) {
+        const edgeSide = localRng();
+        const angle = edgeSide < .50
+          ? Math.PI * (.64 + localRng() * .30)
+          : edgeSide < .82
+            ? Math.PI * (.92 + localRng() * .30)
+            : Math.PI * (.06 + localRng() * .22);
+        const radius = .96 + Math.pow(localRng(), 1.4) * .18;
+        contactScars.push({
+          x: body.x + Math.cos(angle) * body.rx * radius + (localRng() - .5) * 18,
+          y: body.y + Math.sin(angle) * body.ry * radius + (localRng() - .5) * 24,
+          rx: 18 + localRng() * 52,
+          ry: 3 + localRng() * 12,
+          rot: angle + Math.PI / 2 + (localRng() - .5) * .56,
+          phase: localRng() * Math.PI * 2,
+          alpha: .020 + localRng() * .046,
+          stain: localRng() > .55
+        });
+      }
+
+      expelledWaste = [];
+      const wasteGlyphs = ["[", "]", "(", ")", "0", "1", "3", "7", ".", ":", ";", "/", "pp.", "[1]", "[3]", "[12]", "et al.", "doi", "DOI", "Q1", "SSCI", "h-index"];
+      for (let i = 0; i < 34; i++) {
+        const t = localRng();
+        const stream = localRng();
+        const x = body.x + (t - .46) * body.rx * (stream > .62 ? 1.90 : 1.45) + (localRng() - .5) * 18;
+        const y = body.y + body.ry * (.88 + localRng() * .48) + (localRng() - .5) * 15;
+        expelledWaste.push({
+          x,
+          y,
+          char: pick(localRng, wasteGlyphs),
+          size: 1.15 + Math.pow(localRng(), 1.85) * (stream > .74 ? 4.2 : 3.25),
+          rot: (localRng() - .5) * Math.PI,
+          phase: localRng() * Math.PI * 2,
+          speed: 1 / (13000 + localRng() * 7000),
+          flow: 14 + localRng() * 48,
+          side: (localRng() - .24) * (stream > .62 ? 24 : 14),
+          settle: .55 + localRng() * .75,
+          alpha: .055 + localRng() * (stream > .74 ? .26 : .18),
+          stream
+        });
+      }
+
+      lowerRightResidue = [];
+      const lowerRightGlyphs = [".", ",", ":", ";", "0", "1", "[", "]", ")", "(", "doi", "pp.", "[7]", "Q1"];
+      for (let i = 0; i < 34; i++) {
+        const angle = Math.PI * (.08 + localRng() * .24);
+        const radius = .95 + Math.pow(localRng(), 1.7) * .34;
+        const x = body.x + Math.cos(angle) * body.rx * radius + (localRng() - .5) * 18;
+        const y = body.y + Math.sin(angle) * body.ry * radius + (localRng() - .5) * 22;
+        lowerRightResidue.push({
+          x,
+          y,
+          char: pick(localRng, lowerRightGlyphs),
+          size: 1.2 + Math.pow(localRng(), 1.9) * 4.2,
+          rot: (localRng() - .5) * Math.PI,
+          phase: localRng() * Math.PI * 2,
+          alpha: .045 + localRng() * .16,
+          amp: localRng() * 1.0,
+          spot: false
+        });
+      }
+
+      absorbedFragments = [];
+      const absorbGlyphs = ["[12]", "DOI", "2026", "et al.", "pp.", "Q1", "SSCI", "h-index", "cited by", "[3]", "10.", "doi"];
+      for (let i = 0; i < 21; i++) {
+        const startX = body.x + body.rx * (.76 + localRng() * .86) + (localRng() - .5) * 42;
+        const topTip = localRng() > .86;
+        const startY = body.y - body.ry * (.82 + localRng() * (topTip ? .58 : .66)) + (localRng() - .5) * (topTip ? 42 : 54);
+        const endX = body.x + (localRng() - .5) * body.rx * .42;
+        const endY = body.y + (localRng() - .5) * body.ry * .48;
+        absorbedFragments.push({
+          x0: startX,
+          y0: startY,
+          x1: startX - body.rx * (.16 + localRng() * .24),
+          y1: startY + body.ry * (.10 + localRng() * .28),
+          x2: body.x + body.rx * (.42 + localRng() * .22),
+          y2: body.y - body.ry * (.22 + localRng() * .22),
+          x3: endX,
+          y3: endY,
+          char: pick(localRng, absorbGlyphs),
+          phase: localRng(),
+          speed: 1 / (23000 + localRng() * 12000),
+          side: (localRng() - .5) * 18,
+          size: 1.1 + Math.pow(localRng(), 1.8) * 3.4,
+          alpha: .055 + localRng() * .13,
+          rot: (localRng() - .5) * Math.PI
+        });
+      }
+
+      swallowStreams = [];
+      const primaryHoles = body.holes.filter((hole) => hole.primary).slice(0, 4);
+      for (let s = 0; s < 5; s++) {
+        const hole = primaryHoles[s % Math.max(1, primaryHoles.length)] || { x: body.x, y: body.y, rx: 18, ry: 14 };
+        const startX = body.x + body.rx * (1.02 + localRng() * .54);
+        const startY = body.y - body.ry * (1.04 + localRng() * .52);
+        const midBias = .40 + localRng() * .22;
+        const stream = {
+          x0: startX,
+          y0: startY,
+          x1: startX - body.rx * (.15 + localRng() * .30),
+          y1: startY + body.ry * (.12 + localRng() * .26),
+          x2: body.x + body.rx * (.30 + localRng() * .28),
+          y2: body.y - body.ry * (.20 + localRng() * .28),
+          x3: hole.x + (localRng() - .5) * hole.rx * .34,
+          y3: hole.y + (localRng() - .5) * hole.ry * .34,
+          phase: localRng(),
+          speed: 1 / (18500 + localRng() * 8500),
+          width: 7 + localRng() * 18,
+          alpha: .055 + localRng() * .055,
+          midBias,
+          fragments: []
+        };
+        const fragmentCount = 5 + Math.floor(localRng() * 4);
+        for (let i = 0; i < fragmentCount; i++) {
+          stream.fragments.push({
+            offset: i / fragmentCount + localRng() * .16,
+            char: pick(localRng, absorbGlyphs),
+            size: 1.0 + Math.pow(localRng(), 1.7) * 3.2,
+            rot: (localRng() - .5) * Math.PI,
+            side: (localRng() - .5) * (8 + localRng() * 16),
+            alpha: .050 + localRng() * .12
+          });
+        }
+        swallowStreams.push(stream);
+      }
+
+      lifeMotes = [];
+      const lifeGlyphs = [".", ":", ";", "[", "]", "0", "1", "[12]", "doi", "pp.", "Q1", "SSCI"];
+      for (let i = 0; i < 24; i++) {
+        const angle = localRng() * Math.PI * 2;
+        const edge = .92 + localRng() * .38;
+        const sideBias = Math.sin(angle * 2.7 + i) * .10;
+        lifeMotes.push({
+          angle,
+          edge,
+          x: body.x + Math.cos(angle) * body.rx * (edge + sideBias),
+          y: body.y + Math.sin(angle) * body.ry * (edge - sideBias * .5),
+          char: pick(localRng, lifeGlyphs),
+          phase: localRng() * Math.PI * 2,
+          speed: .000025 + localRng() * .000034,
+          twitchPhase: localRng() * Math.PI * 2,
+          twitchSpeed: (Math.PI * 2) / (8600 + localRng() * 9000),
+          twitchAmp: .20 + localRng() * .72,
+          drift: 1.5 + localRng() * 5.2,
+          direction: localRng() > .48 ? 1 : -1,
+          size: 1.0 + Math.pow(localRng(), 1.8) * 3.2,
+          alpha: .038 + localRng() * .105,
+          rot: (localRng() - .5) * Math.PI
+        });
+      }
+
+      mutationSheets = [];
+      const sheetGlyphs = ["[", "]", ")", "(", "0", "1", "3", "7", ":", ";", ".", "/", "{", "}", "[12]", "DOI", "pp.", "Q1", "SSCI"];
+      for (let s = 0; s < 4; s++) {
+        const side = s % 4;
+        const nearTrace = s < 4;
+        const sx =
+          side === 0 ? body.x - body.rx * (.96 + localRng() * .34) :
+          side === 1 ? body.x + body.rx * (.58 + localRng() * .34) :
+          body.x + (localRng() - .5) * body.rx * 1.55;
+        const sy = nearTrace
+          ? body.y - body.ry * (1.10 + localRng() * .35)
+          : body.y + (localRng() - .5) * body.ry * 1.85;
+        const sheet = {
+          x: sx,
+          y: sy,
+          w: 60 + localRng() * 135,
+          h: 18 + localRng() * 64,
+          rot: (localRng() - .5) * Math.PI * 1.45,
+          phase: localRng() * Math.PI * 2,
+          alpha: .18 + localRng() * .28,
+          cells: []
+        };
+        const cellCount = 12 + Math.floor(localRng() * 24);
+        for (let i = 0; i < cellCount; i++) {
+          const rowBias = Math.sin(i * .83 + s) * .22;
+          sheet.cells.push({
+            x: (localRng() - .5) * sheet.w,
+            y: (localRng() - .5 + rowBias) * sheet.h,
+            char: pick(localRng, sheetGlyphs),
+            size: 2.4 + Math.pow(localRng(), 1.55) * 7.2,
+            rot: (localRng() - .5) * Math.PI,
+            alpha: .28 + localRng() * .62
+          });
+        }
+        mutationSheets.push(sheet);
+      }
+
+      mutationRopes = [];
+      for (let r = 0; r < 5; r++) {
+        const fromLeft = r % 3 === 0;
+        const y = body.y - body.ry * .85 + localRng() * body.ry * 1.75;
+        const x0 = fromLeft ? body.x - body.rx * (1.55 + localRng() * .48) : body.x - body.rx * (.78 + localRng() * .34);
+        const x3 = body.x + (localRng() - .35) * body.rx * 1.10;
+        mutationRopes.push({
+          x0,
+          y0: y + (localRng() - .5) * 70,
+          x1: x0 + localRng() * body.rx * .95,
+          y1: y + (localRng() - .5) * 150,
+          x2: x3 - localRng() * body.rx * .70,
+          y2: body.y + (localRng() - .5) * body.ry * 1.6,
+          x3,
+          y3: body.y + (localRng() - .5) * body.ry * 1.2,
+          phase: localRng() * Math.PI * 2,
+          density: .48 + localRng() * .54,
+          width: 6 + localRng() * 24
+        });
+      }
+
+      anchors = makeAnchorSet();
+      spiderWebs = [];
+      const webTargets = [
+        ...anchors.filter((anchor) => anchor.y > body.y - body.ry * 1.05 && anchor.y < body.y + body.ry * 1.32)
+      ];
+      const webCount = Math.min(14, Math.max(8, Math.round(webTargets.length * .48) + 2));
+      for (let w = 0; w < webCount; w++) {
+        const side = w % 5 === 0 ? -1 : w % 3 === 0 ? 1 : (localRng() > .48 ? -1 : 1);
+        const target = webTargets.length
+          ? webTargets[(w * 5 + 1) % webTargets.length]
+          : { x: body.x + side * body.rx * (1.38 + localRng() * .42), y: body.y + (localRng() - .5) * body.ry * 1.7 };
+        const angle = side < 0
+          ? Math.PI * (.70 + localRng() * .62)
+          : Math.PI * (-.24 + localRng() * .48);
+        const x0 = body.x + Math.cos(angle) * body.rx * (.70 + localRng() * .22);
+        const y0 = body.y + Math.sin(angle) * body.ry * (.68 + localRng() * .24);
+        const x3 = clamp(target.x + side * localRng() * width * .08, width * .055, width * .945);
+        const y3 = clamp(target.y + (localRng() - .5) * height * .025, height * .50, height * .94);
+        const web = {
+          x0,
+          y0,
+          x1: x0 + side * body.rx * (.22 + localRng() * .38),
+          y1: y0 + (localRng() - .5) * body.ry * .62,
+          x2: x3 - side * body.rx * (.22 + localRng() * .48),
+          y2: y3 + (localRng() - .5) * body.ry * .45,
+          x3,
+          y3,
+          side,
+          phase: localRng() * Math.PI * 2,
+          alpha: .11 + localRng() * .17,
+          width: .22 + localRng() * .62,
+          nodes: []
+        };
+        const nodeCount = 4 + Math.floor(localRng() * 6);
+        for (let n = 0; n < nodeCount; n++) {
+          const t = (n + .5 + localRng() * .35) / nodeCount;
+          web.nodes.push({
+            t,
+            char: pick(localRng, ["[", "]", "(", ")", ".", ":", "0", "1", "7", "doi", "Q1", "pp"]),
+            size: 1.2 + Math.pow(localRng(), 1.7) * 3.8,
+            offset: (localRng() - .5) * (5 + localRng() * 12),
+            alpha: .16 + localRng() * .34,
+            rot: (localRng() - .5) * Math.PI * .9
+          });
+        }
+        spiderWebs.push(web);
+      }
+
+      tendrils = [];
+      const tendrilCount = Math.min(11, anchors.length);
+      for (let i = 0; i < tendrilCount; i++) {
+        const anchor = anchors[(i * 3 + 2) % anchors.length];
+        const startAngle = -Math.PI + (i / tendrilCount) * Math.PI * 2 + (localRng() - .5) * .8;
+        const sx = body.x + Math.cos(startAngle) * body.rx * (.34 + localRng() * .43);
+        const sy = body.y + Math.sin(startAngle) * body.ry * (.32 + localRng() * .50);
+        const pull = .28 + localRng() * .34;
+        tendrils.push({
+          x0: sx,
+          y0: sy,
+          x1: body.x + (anchor.x - body.x) * pull + (localRng() - .5) * 160,
+          y1: body.y + (anchor.y - body.y) * pull + (localRng() - .5) * 120,
+          x2: anchor.x + (body.x - anchor.x) * .18 + (localRng() - .5) * 170,
+          y2: anchor.y + (body.y - anchor.y) * .12 + (localRng() - .5) * 115,
+          x3: anchor.x,
+          y3: anchor.y,
+          width: 10 + localRng() * 32,
+          phase: localRng() * Math.PI * 2,
+          glyphStep: 13 + localRng() * 18,
+          color: pick(localRng, palette)
+        });
+      }
+      publishStats();
+    }
+
+    function prepareInfectionGradient() {
+      if (infectionPrepared || !body) return;
+      infectionPrepared = true;
+      infectionTargets.forEach((element) => {
+        const rect = relativeRect(element, paper);
+        const cx = rect.left + rect.width * .5;
+        const cy = rect.top + rect.height * .5;
+        const rawDx = (cx - body.x) / body.rx;
+        const rawDy = (cy - body.y) / body.ry;
+        const dx = Math.abs(rawDx);
+        const dy = Math.abs(rawDy);
+        const distance = Math.sqrt(dx * dx + dy * dy);
+        const isReference = !!element.closest(".references");
+        const referenceIndex = isReference
+          ? Array.prototype.indexOf.call(element.parentElement.querySelectorAll("p"), element)
+          : -1;
+        const referenceAnchor = isReference && referenceIndex >= 0 && referenceIndex < 3;
+        const isPrimaryTrace = !!element.closest(".trace-grid p:first-child");
+        const sideProximity = rawDx > 0
+          ? clamp(1 - Math.abs(rawDx - .72) / 1.55, 0, 1)
+          : clamp(1 - Math.abs(rawDx + 1.05) / 1.75, 0, 1);
+        const verticalProximity = clamp(1 - Math.abs(rawDy) / 1.65, 0, 1);
+        const contactPull = clamp(1 - Math.abs(distance - 1.04) / .82, 0, 1) * verticalProximity;
+        const webPull = Math.max(0, sideProximity * verticalProximity);
+        const pull = clamp(Math.max(1 - distance / 2.85, webPull * .86, contactPull * .72), 0, 1);
+        const vectorLength = Math.max(.001, Math.sqrt((body.x - cx) ** 2 + (body.y - cy) ** 2));
+        const pullVector = {
+          x: (body.x - cx) / vectorLength,
+          y: (body.y - cy) / vectorLength
+        };
+        let intensity;
+        let zone;
+        if (distance > 2.55 && webPull < .18) {
+          intensity = .002;
+          zone = "infection-far";
+        } else if (distance > 1.48 && webPull < .44) {
+          intensity = .014 + pull * .044 + webPull * .030 + contactPull * .024;
+          zone = "infection-mid";
+        } else if (distance > .92) {
+          intensity = isPrimaryTrace
+            ? .050 + contactPull * .018
+            : isReference
+              ? (referenceAnchor ? .095 : .13) + webPull * (referenceAnchor ? .030 : .045) + contactPull * (referenceAnchor ? .020 : .032)
+              : .34 + webPull * .13 + contactPull * .11;
+          zone = "infection-near";
+        } else {
+          intensity = isPrimaryTrace ? .068 : isReference ? (referenceAnchor ? .12 : .19) + webPull * (referenceAnchor ? .026 : .038) : .64;
+          zone = isPrimaryTrace ? "infection-mid" : isReference ? "infection-near" : (rng() > .42 ? "infection-chaotic" : "infection-inside");
+        }
+        element.classList.add(zone);
+        const direction = rawDx < 0 ? 1 : -1;
+        const chaotic = zone === "infection-chaotic";
+        const tension = pull + webPull * .42 + contactPull * .50;
+        const lateralTension = direction * tension;
+        const proseBoost = isReference || isPrimaryTrace ? (referenceAnchor ? .62 : .84) : 1.34;
+        const ingestionBoost = isReference || isPrimaryTrace ? 1 : 1 + contactPull * .72 + webPull * .28;
+        const lineRot = (lateralTension * (pull ** .88) * (isReference ? 6.4 : chaotic ? 43 : 28) * proseBoost * ingestionBoost + (rng() - .5) * pull * (chaotic ? 30 : 10.8) * proseBoost).toFixed(2);
+        const lineSkew = (lateralTension * (isReference ? 4.8 : chaotic ? 28 : 20.5) * proseBoost * ingestionBoost).toFixed(2);
+        const lineSkewY = (((rawDy < 0 ? 1 : -1) * (webPull + contactPull * .78) * (isReference ? 5.8 : 11.6)) + (rng() - .5) * pull * (chaotic ? 15 : 5.8) * proseBoost).toFixed(2);
+        const lineScaleX = (1 + (rng() - .5) * pull * (chaotic ? .62 : .27) * proseBoost + (webPull + contactPull) * (isReference ? .040 : .075)).toFixed(3);
+        const lineDx = (lateralTension * (isReference ? 8.2 : chaotic ? 40 : 29.5) * proseBoost * ingestionBoost + (rng() - .5) * pull * (chaotic ? 22 : 11.4) * proseBoost).toFixed(2);
+        const lineDy = (((body.y - cy) / body.ry) * (pull + webPull * .36 + contactPull * .62) * (isReference ? 4.8 : chaotic ? 31 : 21.6) * proseBoost + (rng() - .5) * pull * (chaotic ? 19 : 8.0) * proseBoost).toFixed(2);
+        element.style.setProperty("--line-rot", lineRot + "deg");
+        element.style.setProperty("--line-skew", lineSkew + "deg");
+        element.style.setProperty("--line-skew-y", lineSkewY + "deg");
+        element.style.setProperty("--line-scale-x", lineScaleX);
+        element.style.setProperty("--line-dx", lineDx + "px");
+        element.style.setProperty("--line-dy", lineDy + "px");
+        element.style.setProperty("--line-blur", (pull * (isReference ? .14 : chaotic ? 1.34 : .98)).toFixed(2) + "px");
+        element.style.setProperty("--infection-origin-x", rawDx < 0 ? "100%" : "0%");
+        element.style.setProperty("--infection-origin-y", rawDy < 0 ? "100%" : "0%");
+        infectElementText(element, intensity, rng, pullVector, {
+          chaotic,
+          vectorStrength: (isReference || isPrimaryTrace ? (referenceAnchor ? .46 : .64) : 1.12) * (.62 + pull * .82 + contactPull * .44)
+        });
+      });
+      mutatedDomSpanCount = document.querySelectorAll(".infected-char").length;
+      animatedDomSpanCount = document.querySelectorAll(".infection-near .infected-char, .infection-inside .infected-char, .infection-chaotic .infected-char").length;
+      publishStats();
+    }
+
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, canvasDprCap);
+      width = paper.clientWidth;
+      height = Math.max(paper.scrollHeight, paper.clientHeight);
+      canvas.style.height = height + "px";
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      interactionCanvas.style.height = height + "px";
+      interactionCanvas.width = Math.round(width * dpr);
+      interactionCanvas.height = Math.round(height * dpr);
+      interactionCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      interactionCtx.clearRect(0, 0, width, height);
+      updateViewBounds();
+      buildScene();
+      prepareInfectionGradient();
+    }
+
+    function drawTextParticle(particle, time, breath, heat) {
+      const startupEase = getStartupEase(time);
+      const local = time * (.000036 + startupEase * .000055) + particle.phase;
+      const corePulse = Math.pow(particle.weight, 2.45);
+      const syncBreath = breath * .44 + currentBreath.organ * .56;
+      const motionGate = .13 + startupEase * .49;
+      const pulse = Math.sin(local * .92) * syncBreath;
+      const edgeStillness = .08 + corePulse * .92;
+      const x = particle.x + Math.cos(local * .72) * particle.amp * (.016 + syncBreath * .074 * edgeStillness + heat * .030 * corePulse) * motionGate;
+      const y = particle.y + Math.sin(local * .64) * particle.amp * (.016 + syncBreath * .080 * edgeStillness + heat * .030 * corePulse) * motionGate;
+      const scale = 1 + pulse * .045 * corePulse + heat * .012 * corePulse;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(particle.rot + Math.sin(local * .58) * .020 * syncBreath * edgeStillness * motionGate);
+      const form = particle.form || "dust";
+      const stretch = form === "thread" ? 1.45 + corePulse * .28 : form === "spore" ? .88 : 1;
+      const squash = form === "thread" ? .76 : form === "spore" ? 1.08 : 1;
+      ctx.scale(scale * stretch, scale * squash);
+      const plumeScale = particle.plumePeak ? (.72 + upperPlumeDensity * .28) : 1;
+      ctx.globalAlpha = clamp(.105 + particle.weight * .205 + syncBreath * .040 * corePulse, .048, .34) * (particle.alphaScale || 1) * plumeScale;
+      ctx.fillStyle = particle.color;
+      const compact = particle.char.length > 1;
+      ctx.font = `${particle.weight > .48 ? 600 : 470} ${particle.size * (compact ? .48 : .54)}px "Times New Roman", Times, serif`;
+      if (particle.blur) {
+        ctx.shadowColor = "rgba(0,0,0,.16)";
+        ctx.shadowBlur = particle.blur + syncBreath * 1.05 * corePulse + (form === "clot" ? .75 : form === "spore" ? .45 : 0);
+      }
+      if (form === "clot") {
+        const spread = particle.spread || 1.4;
+        ctx.fillText(particle.char, 0, 0);
+        ctx.globalAlpha *= .46;
+        ctx.fillText(compact ? particle.char : ".", -spread * .62, spread * .38);
+        ctx.fillText(compact ? "." : particle.char, spread * .46, -spread * .30);
+      } else if (form === "spore") {
+        ctx.fillText(compact ? particle.char : "o", 0, 0);
+        ctx.globalAlpha *= .32;
+        ctx.fillText(".", (particle.spread || 1) * .9, -(particle.spread || 1) * .55);
+      } else {
+        ctx.fillText(particle.char, 0, 0);
+      }
+      ctx.restore();
+    }
+
+    function drawClotMass(time, breath, heat) {
+      const startupEase = getStartupEase(time);
+      for (const clot of clots) {
+        if (!isPointVisible(clot.x, clot.y, 140)) continue;
+        const local = time * (.000032 + startupEase * .000050) + clot.phase;
+        const corePulse = Math.pow(clot.core, 2.1);
+        const organ = currentBreath.organ;
+        const motionGate = .13 + startupEase * .49;
+        const swell = .975 + organ * .064 * corePulse + breath * .034 * corePulse + Math.sin(local * .76) * .007 * corePulse + heat * .012 * corePulse;
+        const x = clot.x + Math.cos(local * .72) * clot.amp * (.016 + organ * .046 * corePulse) * motionGate;
+        const y = clot.y + Math.sin(local * .62) * clot.amp * (.016 + organ * .052 * corePulse) * motionGate;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(clot.rot + Math.sin(local * .48) * .014 * corePulse * motionGate);
+      const form = clot.form || "clot";
+      ctx.scale(swell * (form === "thread" ? 1.38 : form === "spore" ? .92 : 1), swell * (form === "thread" ? .78 : form === "spore" ? 1.08 : 1));
+        const plumeScale = clot.plumePeak ? (.72 + upperPlumeDensity * .28) : 1;
+        ctx.globalAlpha = clamp(clot.alpha * .68 + breath * .038 * corePulse, .026, .20) * plumeScale;
+        ctx.fillStyle = clot.color;
+        ctx.shadowColor = "rgba(0,0,0,.16)";
+        ctx.shadowBlur = .7 + breath * 1.85 * corePulse + (form === "clot" ? .55 : 0);
+        ctx.font = `580 ${clot.size * .68}px "Times New Roman", Times, serif`;
+        ctx.fillText(clot.char, 0, 0);
+        if (form === "clot") {
+          ctx.globalAlpha *= .40;
+          ctx.fillText(clot.char.length > 1 ? "." : clot.char, -(clot.spread || 1) * .45, (clot.spread || 1) * .35);
+          ctx.fillText(".", (clot.spread || 1) * .55, -(clot.spread || 1) * .25);
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawUpperBridgeParticles(time, breath) {
+      const density = upperPlumeDensity;
+      for (const particle of upperBridgeParticles) {
+        if (!isPointVisible(particle.x, particle.y, 110)) continue;
+        const local = time * (.000020 + particle.drift * .000018) + particle.phase;
+        const metabolic = currentBreath.ingest * .46 + currentBreath.digest * .28 + currentBreath.organ * .18 + breath * .18;
+        const flow = .18 + density * .34 + metabolic * .28;
+        const x = particle.x
+          + Math.cos(local * .76) * particle.amp * (.16 + flow * .16)
+          - particle.outward * body.rx * (currentBreath.ingest * .014 + currentBreath.digest * .006);
+        const y = particle.y
+          + Math.sin(local * .58) * particle.amp * (.12 + flow * .12)
+          + (currentBreath.ingest * .010 + currentBreath.digest * .008) * body.ry;
+        const mistPulse = Math.pow((Math.sin(local * .72) + 1) / 2, 1.65);
+        const farLighten = clamp((particle.upperBias - .55) / .45, 0, 1) * clamp((particle.outward - .18) / .82, 0, 1);
+        const alpha = clamp(particle.alpha * (.58 + density * .46) * (1 - farLighten * .18) + mistPulse * .018 + currentBreath.ingest * .040 + currentBreath.digest * .018, .052, .32);
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(particle.rot + Math.sin(local * .42) * .030);
+        const compact = particle.char.length > 1;
+        const form = particle.form || "fragment";
+        if (form === "soft-clot") ctx.scale(1.12, .92);
+        if (form === "dust") ctx.scale(.86, .96);
+        ctx.globalCompositeOperation = "multiply";
+        ctx.globalAlpha = alpha;
+        ctx.fillStyle = compact ? "rgba(54,47,39,.24)" : "rgba(36,31,27,.27)";
+        ctx.shadowColor = "rgba(24,19,16,.18)";
+        ctx.shadowBlur = particle.blur + density * 1.1 + currentBreath.digest * 1.2 + farLighten * .35;
+        ctx.font = `${compact ? 500 : 560} ${particle.size * (compact ? .72 : .94)}px "Times New Roman", Times, serif`;
+        ctx.fillText(particle.char, 0, 0);
+        if (form === "soft-clot") {
+          ctx.globalAlpha *= .28;
+          ctx.fillText(".", particle.size * .52, -particle.size * .22);
+          ctx.fillText(compact ? "." : particle.char, -particle.size * .42, particle.size * .30);
+        }
+        ctx.restore();
+      }
+      ctx.globalCompositeOperation = "source-over";
+    }
+
+    function drawTendril(tendril, time, breath, heat) {
+      if (!isCurveVisible(tendril, 160)) return;
+      const steps = Math.max(10, Math.round(58 / (tendril.glyphStep / 16)));
+      for (let i = 0; i <= steps; i++) {
+        const t = i / steps;
+        const rootPulse = Math.pow(1 - t, 2.2);
+        const wiggle = Math.sin(time * .00018 + tendril.phase + t * 9) * tendril.width * (.018 + breath * .030 * rootPulse + heat * .016 * rootPulse);
+        const x = cubic(tendril.x0, tendril.x1, tendril.x2, tendril.x3, t) + Math.sin(t * Math.PI * 2 + tendril.phase) * wiggle;
+        const y = cubic(tendril.y0, tendril.y1, tendril.y2, tendril.y3, t) + Math.cos(t * Math.PI * 2 + tendril.phase) * wiggle * .62;
+        const nx = cubic(tendril.x0, tendril.x1, tendril.x2, tendril.x3, clamp(t + .015, 0, 1));
+        const ny = cubic(tendril.y0, tendril.y1, tendril.y2, tendril.y3, clamp(t + .015, 0, 1));
+        const angle = Math.atan2(ny - y, nx - x);
+        const density = Math.pow(1 - Math.abs(t - .45), .7);
+        const size = 2.2 + Math.pow(density, 1.35) * 5.8 + breath * .9 * rootPulse;
+        const char = t < .25 ? pick(mulberry32(seed + i * 13), residueGlyphs) : pick(mulberry32(seed + i * 29), glyphs);
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(angle + Math.sin(time * .00020 + i) * .042 * rootPulse);
+        ctx.globalAlpha = clamp(.13 + density * .26 + breath * .044 * rootPulse, .07, .48);
+        ctx.fillStyle = i % 11 === 0 ? "rgba(28,103,114,.42)" : i % 17 === 0 ? "rgba(95,50,88,.38)" : tendril.color;
+        ctx.shadowColor = "rgba(0,0,0,.30)";
+        ctx.shadowBlur = density * 1.8 + breath * 1.2 * rootPulse;
+        ctx.font = `${510 + Math.round(density * 110)} ${size * (char.length > 1 ? .64 : .90)}px "Times New Roman", Times, serif`;
+        ctx.fillText(char, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function drawPulledFragments(tendril, time, breath) {
+      if (!isCurveVisible(tendril, 150)) return;
+      const fragments = [
+        "[", "]", "(", ")", ".", ":", ";", "/", "0", "1", "3", "7",
+        "[1]", "[3]", "[12]", "[27]", "1998", "2006", "2026", "10.", "10.0",
+        "doi", "DOI", "DOI:", "/jes", "et", "al.", "et al.", "pp.", "45", "67",
+        "Q1", "SSCI", "h-", "idx", "h-index", "cited by"
+      ];
+      const streams = 4;
+      for (let k = 0; k < streams; k++) {
+        const flow = (time * .000028 + tendril.phase * .113 + k / streams) % 1;
+        const t = 1 - flow;
+        const x = cubic(tendril.x0, tendril.x1, tendril.x2, tendril.x3, t);
+        const y = cubic(tendril.y0, tendril.y1, tendril.y2, tendril.y3, t);
+        const nx = cubic(tendril.x0, tendril.x1, tendril.x2, tendril.x3, clamp(t + .018, 0, 1));
+        const ny = cubic(tendril.y0, tendril.y1, tendril.y2, tendril.y3, clamp(t + .018, 0, 1));
+        const angle = Math.atan2(ny - y, nx - x);
+        const nearCore = Math.pow(1 - t, 1.5);
+        const side = Math.sin(time * .00018 + k * 2.7 + tendril.phase) * tendril.width * (.026 + nearCore * .045);
+
+        ctx.save();
+        ctx.translate(x + Math.sin(angle + Math.PI / 2) * side, y - Math.cos(angle + Math.PI / 2) * side);
+        ctx.rotate(angle + Math.sin(time * .00020 + k) * .070);
+        ctx.globalAlpha = clamp(.065 + nearCore * .23 + breath * .028, .05, .36);
+        ctx.fillStyle = k % 9 === 0 ? "rgba(28,98,110,.28)" : "rgba(44,38,32,.30)";
+        ctx.shadowColor = "rgba(0,0,0,.26)";
+        ctx.shadowBlur = 1.1 + nearCore * 3.0;
+        const fragment = fragments[(k * 5 + Math.floor(flow * fragments.length)) % fragments.length];
+        ctx.font = `${nearCore > .62 ? 560 : 470} ${(1.42 + nearCore * 3.45) * (fragment.length > 3 ? .68 : .88)}px "Times New Roman", Times, serif`;
+        ctx.fillText(fragment, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function drawMutationSheets(time, breath) {
+      for (const sheet of mutationSheets) {
+        if (!isPointVisible(sheet.x, sheet.y, Math.max(sheet.w, sheet.h) * .75 + 120)) continue;
+        const local = time * .00013 + sheet.phase;
+        ctx.save();
+        ctx.translate(
+          sheet.x + Math.cos(local) * .75 * breath,
+          sheet.y + Math.sin(local * .8) * .90 * breath
+        );
+        ctx.rotate(sheet.rot + Math.sin(local * .65) * .018);
+        ctx.globalAlpha = sheet.alpha * .88 + breath * .055;
+        for (const cell of sheet.cells) {
+          const flicker = .88 + Math.sin(local * 1.05 + cell.x * .07 + cell.y * .09) * .12;
+          ctx.save();
+          ctx.translate(cell.x, cell.y);
+          ctx.rotate(cell.rot + Math.sin(local + cell.x) * .024);
+          ctx.globalAlpha *= cell.alpha * flicker;
+          ctx.fillStyle = cell.alpha > .72 ? "rgba(31,27,23,.46)" : "rgba(68,59,47,.30)";
+          ctx.shadowColor = "rgba(5,4,3,.18)";
+          ctx.shadowBlur = .9 + breath * 1.5;
+          ctx.font = `${cell.alpha > .7 ? 620 : 500} ${cell.size * .74}px "Times New Roman", Times, serif`;
+          ctx.fillText(cell.char, 0, 0);
+          ctx.restore();
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawMutationRopes(time, breath) {
+      const ropeGlyphs = ["[", "]", "{", "}", "0", "1", ":", ";", ".", "/", "[12]", "DOI", "pp.", "Q1", "SSCI"];
+      for (const rope of mutationRopes) {
+        if (!isCurveVisible(rope, 150)) continue;
+        const steps = Math.round(18 + rope.density * 22);
+        for (let i = 0; i < steps; i++) {
+          const t = i / (steps - 1);
+          const wave = Math.sin(time * .00015 + rope.phase + t * 11) * rope.width * (.045 + breath * .045);
+          const x = cubic(rope.x0, rope.x1, rope.x2, rope.x3, t) + Math.sin(t * Math.PI * 2) * wave;
+          const y = cubic(rope.y0, rope.y1, rope.y2, rope.y3, t) + Math.cos(t * Math.PI * 2) * wave * .42;
+          const nx = cubic(rope.x0, rope.x1, rope.x2, rope.x3, clamp(t + .02, 0, 1));
+          const ny = cubic(rope.y0, rope.y1, rope.y2, rope.y3, clamp(t + .02, 0, 1));
+          const angle = Math.atan2(ny - y, nx - x);
+          const density = Math.pow(1 - Math.abs(t - .55), .62);
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(angle + Math.sin(time * .00016 + i) * .105);
+          ctx.globalAlpha = clamp(.08 + density * .34, .06, .45);
+          ctx.fillStyle = i % 6 === 0 ? "rgba(25,91,102,.26)" : "rgba(45,39,33,.38)";
+          ctx.shadowColor = "rgba(0,0,0,.22)";
+          ctx.shadowBlur = density * 2.4;
+          const ropeChar = ropeGlyphs[(i * 7 + Math.floor(time * .00007)) % ropeGlyphs.length];
+          ctx.font = `${480 + Math.round(density * 155)} ${(2.05 + density * 6.15) * (ropeChar.length > 1 ? .66 : .88)}px "Times New Roman", Times, serif`;
+          ctx.fillText(ropeChar, 0, 0);
+          ctx.restore();
+        }
+      }
+    }
+
+    function drawSpiderWebs(time, breath) {
+      for (const web of spiderWebs) {
+        if (!isCurveVisible(web, 150)) continue;
+        const local = time * .00011 + web.phase;
+        const flex = Math.sin(local) * (.58 + breath * 1.15);
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(web.x0, web.y0);
+        ctx.bezierCurveTo(
+          web.x1 + flex * web.side,
+          web.y1 - flex * .55,
+          web.x2 - flex * web.side,
+          web.y2 + flex * .45,
+          web.x3,
+          web.y3
+        );
+        ctx.globalAlpha = clamp(web.alpha + breath * .035, .10, .30);
+        ctx.strokeStyle = web.side < 0 ? "rgba(22,18,15,.36)" : "rgba(24,20,17,.32)";
+        ctx.lineWidth = web.width;
+        ctx.shadowColor = "rgba(15,12,10,.18)";
+        ctx.shadowBlur = 1.6;
+        ctx.stroke();
+        ctx.restore();
+
+        for (const node of web.nodes) {
+          const t = node.t;
+          const x = cubic(web.x0, web.x1 + flex * web.side, web.x2 - flex * web.side, web.x3, t);
+          const y = cubic(web.y0, web.y1 - flex * .55, web.y2 + flex * .45, web.y3, t);
+          const nx = cubic(web.x0, web.x1, web.x2, web.x3, clamp(t + .02, 0, 1));
+          const ny = cubic(web.y0, web.y1, web.y2, web.y3, clamp(t + .02, 0, 1));
+          const angle = Math.atan2(ny - y, nx - x);
+          const drift = Math.sin(local * .82 + t * 9) * node.offset * .42;
+          const normalX = Math.sin(angle + Math.PI / 2);
+          const normalY = -Math.cos(angle + Math.PI / 2);
+          ctx.save();
+          ctx.translate(x + normalX * drift, y + normalY * drift);
+          ctx.rotate(angle + node.rot + Math.sin(local + t * 6) * .024);
+          ctx.globalAlpha = clamp(node.alpha * .86 + breath * .032, .08, .35);
+          ctx.fillStyle = node.char.length > 1 ? "rgba(50,43,35,.32)" : "rgba(25,22,19,.38)";
+          ctx.shadowColor = "rgba(0,0,0,.20)";
+          ctx.shadowBlur = 1.1;
+          ctx.font = `${node.char.length > 1 ? 500 : 580} ${node.size * (node.char.length > 1 ? .82 : .88)}px "Times New Roman", Times, serif`;
+          ctx.fillText(node.char, 0, 0);
+          ctx.restore();
+        }
+      }
+    }
+
+    function drawContactScars(time, breath) {
+      for (const scar of contactScars) {
+        if (!isPointVisible(scar.x, scar.y, scar.rx + 100)) continue;
+        const local = time * .00011 + scar.phase;
+        const pulse = .82 + Math.sin(local) * .10 + breath * .12;
+        ctx.save();
+        ctx.translate(
+          scar.x + Math.cos(local * .7) * .45,
+          scar.y + Math.sin(local * .6) * .35
+        );
+        ctx.rotate(scar.rot + Math.sin(local * .45) * .018);
+        ctx.scale(pulse, 1 + breath * .035);
+        ctx.globalCompositeOperation = "multiply";
+        ctx.globalAlpha = scar.alpha + breath * .018;
+        const stain = ctx.createRadialGradient(0, 0, 0, 0, 0, scar.rx);
+        stain.addColorStop(0, scar.stain ? "rgba(70,57,42,.34)" : "rgba(39,32,27,.25)");
+        stain.addColorStop(.42, scar.stain ? "rgba(112,96,68,.14)" : "rgba(82,68,52,.10)");
+        stain.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = stain;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, scar.rx, scar.ry, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+
+    function drawEdgeCrumbs(time, breath) {
+      for (const crumb of edgeCrumbs) {
+        if (!isPointVisible(crumb.x, crumb.y, 95)) continue;
+        const local = time * .000070 + crumb.phase;
+        ctx.save();
+        ctx.translate(
+          crumb.x + Math.cos(local * .82) * crumb.amp * (.055 + breath * .070),
+          crumb.y + Math.sin(local * .66) * crumb.amp * (.055 + breath * .075)
+        );
+        ctx.rotate(crumb.rot + Math.sin(local) * .038);
+        const form = crumb.form || "dust";
+        if (form === "thread") ctx.scale(1.42, .78);
+        if (form === "clot") ctx.scale(.94, 1.08);
+        ctx.globalAlpha = (crumb.alpha + breath * .064) * .84;
+        ctx.fillStyle = crumb.alpha > .34 ? "rgba(22,19,17,.46)" : "rgba(78,68,52,.28)";
+        ctx.shadowColor = "rgba(0,0,0,.20)";
+        ctx.shadowBlur = 1.2 + breath * 1.8 + (form === "clot" ? .9 : 0);
+        ctx.font = `${crumb.alpha > .34 ? 640 : 500} ${crumb.size * .84}px "Times New Roman", Times, serif`;
+        ctx.fillText(crumb.char, 0, 0);
+        if (form === "clot") {
+          ctx.globalAlpha *= .42;
+          ctx.fillText(".", (crumb.spread || 1) * .65, -(crumb.spread || 1) * .25);
+          ctx.fillText(crumb.char.length > 1 ? "." : crumb.char, -(crumb.spread || 1) * .50, (crumb.spread || 1) * .40);
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawExpelledWaste(time, breath) {
+      const steppedTime = Math.floor(time / 180) * 180;
+      for (const waste of expelledWaste) {
+        const expel = currentBreath.expel;
+        const local = (steppedTime * waste.speed * (.82 + expel * .30) + waste.phase + expel * .054) % 1;
+        const eased = local < .72
+          ? Math.pow(local / .72, 1.35) * .72
+          : .72 + (local - .72) * .82;
+        const fall = eased * waste.flow;
+        const expelPush = expel * waste.settle * .18;
+        const streamBias = (waste.stream || 0) > .62 ? 1 : .52;
+        const x = waste.x + Math.sin(steppedTime * .00011 + waste.phase) * waste.side * .040 + eased * waste.side * (.38 + streamBias * .25 + expel * .08);
+        const y = waste.y + fall * waste.settle + expelPush + Math.pow(eased, 1.7) * (6 + streamBias * 10 + expel * 10);
+        if (!isPointVisible(x, y, 110)) continue;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(waste.rot + Math.sin(steppedTime * .00012 + waste.phase) * .045 + eased * (.20 + streamBias * .05));
+        ctx.globalAlpha = clamp(waste.alpha * (1 - eased * .18) + breath * .008 + expel * (.052 + streamBias * .018), .038, .36);
+        ctx.fillStyle = waste.alpha > .24 ? "rgba(16,14,12,.36)" : "rgba(72,62,47,.23)";
+        ctx.shadowColor = "rgba(0,0,0,.18)";
+        ctx.shadowBlur = .6 + breath * .8 + expel * 1.1;
+        ctx.font = `${waste.alpha > .24 ? 620 : 480} ${waste.size * (1 - eased * .08)}px "Times New Roman", Times, serif`;
+        ctx.fillText(waste.char, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function drawSwallowStreams(time, breath) {
+      for (const stream of swallowStreams) {
+        if (!isCurveVisible(stream, 180)) continue;
+        const ingest = currentBreath.ingest;
+        const digest = currentBreath.digest;
+        const membrane = currentBreath.membrane;
+        const flex = Math.sin(time * .000082 + stream.phase * 9) * stream.width * (.048 + ingest * .052 + digest * .030);
+
+        ctx.save();
+        ctx.beginPath();
+        ctx.moveTo(stream.x0, stream.y0);
+        ctx.bezierCurveTo(
+          stream.x1 + flex,
+          stream.y1 - flex * .35,
+          stream.x2 - flex * .55,
+          stream.y2 + flex * .42,
+          stream.x3,
+          stream.y3
+        );
+        ctx.globalCompositeOperation = "multiply";
+        ctx.globalAlpha = clamp(stream.alpha + ingest * .060 + digest * .030 + breath * .010, .026, .20);
+        ctx.strokeStyle = "rgba(42,34,29,.28)";
+        ctx.lineWidth = .42 + membrane * .42 + ingest * .28;
+        ctx.shadowColor = "rgba(10,7,6,.14)";
+        ctx.shadowBlur = 1.1 + ingest * 1.7 + digest * 1.2;
+        ctx.stroke();
+        ctx.restore();
+
+        for (const fragment of stream.fragments) {
+          const raw = (time * stream.speed * (.66 + ingest * .22) + stream.phase + fragment.offset + ingest * .040 + digest * .018) % 1;
+          const t = Math.pow(raw, .86 - ingest * .06);
+          const x = cubic(stream.x0, stream.x1 + flex, stream.x2 - flex * .55, stream.x3, t);
+          const y = cubic(stream.y0, stream.y1 - flex * .35, stream.y2 + flex * .42, stream.y3, t);
+          const nx = cubic(stream.x0, stream.x1, stream.x2, stream.x3, clamp(t + .018, 0, 1));
+          const ny = cubic(stream.y0, stream.y1, stream.y2, stream.y3, clamp(t + .018, 0, 1));
+          const angle = Math.atan2(ny - y, nx - x);
+          const swallowed = Math.pow(t, 1.65);
+          const side = Math.sin(time * .00015 + fragment.offset * 11) * fragment.side * (1 - swallowed * .60);
+          const normalX = Math.sin(angle + Math.PI / 2);
+          const normalY = -Math.cos(angle + Math.PI / 2);
+
+          ctx.save();
+          ctx.translate(x + normalX * side, y + normalY * side);
+          ctx.rotate(angle + fragment.rot * (1 - swallowed * .66));
+          ctx.globalAlpha = clamp(fragment.alpha * (1 - swallowed * .36) + ingest * .070 + digest * .038 + breath * .010, .032, .30);
+          ctx.fillStyle = fragment.char.length > 1 ? "rgba(45,39,32,.28)" : "rgba(24,21,18,.32)";
+          ctx.shadowColor = "rgba(18,12,10,.18)";
+          ctx.shadowBlur = .8 + swallowed * 2.4 + ingest * 1.5 + digest * 1.0;
+          ctx.font = `${fragment.char.length > 3 ? 480 : 560} ${fragment.size * (fragment.char.length > 3 ? .72 : .92) * (1 - swallowed * .10)}px "Times New Roman", Times, serif`;
+          ctx.fillText(fragment.char, 0, 0);
+          ctx.restore();
+        }
+      }
+    }
+
+    function drawAbsorbedFragments(time, breath) {
+      for (const fragment of absorbedFragments) {
+        if (!isCurveVisible(fragment, 150)) continue;
+        const flow = (time * fragment.speed + fragment.phase + currentBreath.digest * .018) % 1;
+        const t = Math.pow(flow, .88);
+        const x = cubic(fragment.x0, fragment.x1, fragment.x2, fragment.x3, t);
+        const y = cubic(fragment.y0, fragment.y1, fragment.y2, fragment.y3, t);
+        const nx = cubic(fragment.x0, fragment.x1, fragment.x2, fragment.x3, clamp(t + .018, 0, 1));
+        const ny = cubic(fragment.y0, fragment.y1, fragment.y2, fragment.y3, clamp(t + .018, 0, 1));
+        const angle = Math.atan2(ny - y, nx - x);
+        const digestion = Math.pow(t, 1.5);
+        const side = Math.sin(time * .00011 + fragment.phase * 7) * fragment.side * .46 * (1 - digestion * .45);
+
+        ctx.save();
+        ctx.translate(x + Math.sin(angle + Math.PI / 2) * side, y - Math.cos(angle + Math.PI / 2) * side * .55);
+        ctx.rotate(angle + fragment.rot * (1 - digestion * .60) + Math.sin(time * .00014 + fragment.phase) * .034);
+        ctx.globalAlpha = clamp(fragment.alpha * (1 - digestion * .42) + currentBreath.digest * .030 + breath * .010, .035, .22);
+        ctx.fillStyle = fragment.char.length > 1 ? "rgba(45,39,32,.25)" : "rgba(24,21,18,.31)";
+        ctx.shadowColor = "rgba(22,17,14,.14)";
+        ctx.shadowBlur = .6 + digestion * 1.8;
+        ctx.font = `${fragment.char.length > 1 ? 470 : 540} ${fragment.size * (1 - digestion * .18) * (fragment.char.length > 3 ? .72 : 1)}px "Times New Roman", Times, serif`;
+        ctx.fillText(fragment.char, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function drawLowerRightResidue(time, breath) {
+      for (const residue of lowerRightResidue) {
+        if (!isPointVisible(residue.x, residue.y, 100)) continue;
+        const local = time * .00015 + residue.phase;
+        ctx.save();
+        ctx.translate(
+          residue.x + Math.cos(local * .75) * residue.amp * .070,
+          residue.y + Math.sin(local * .60) * residue.amp * .065
+        );
+        ctx.rotate(residue.rot + Math.sin(local) * .026);
+        ctx.globalAlpha = clamp(residue.alpha + breath * .025, .04, .30);
+        ctx.fillStyle = "rgba(50,42,34,.20)";
+        ctx.shadowColor = "rgba(68,56,40,.18)";
+        ctx.shadowBlur = .75;
+        ctx.font = `500 ${residue.size * .82}px "Times New Roman", Times, serif`;
+        ctx.fillText(residue.char, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function spawnInteractionBurst(kind, x, y) {
+      if (!body) return;
+      const localRng = Math.random;
+      const longPress = kind === "long";
+      const holdAbsorb = kind === "hold";
+      const immediateTouch = kind === "touch";
+      const tapStartle = immediateTouch || kind === "tap";
+      const releaseBurst = kind === "release";
+      const count = longPress
+        ? Math.round(13 + localRng() * 7)
+        : holdAbsorb
+          ? Math.round(4 + localRng() * 3)
+          : releaseBurst
+            ? Math.round(16 + localRng() * 9)
+            : immediateTouch
+              ? Math.round(6 + localRng() * 4)
+              : Math.round(6 + localRng() * 3);
+      const glyphList = ["[12]", "DOI", "2026", "et al.", "pp.", "Q1", "SSCI", "h-index", "cited by", "[3]", "10.", "doi", "0", "1"];
+      const start = performance.now();
+
+      for (let i = 0; i < count; i++) {
+        const expel = releaseBurst || (!tapStartle && !holdAbsorb && (y > body.y + body.ry * .28 || (longPress && localRng() > .52)));
+        const duration = longPress
+          ? 760 + localRng() * 900
+          : holdAbsorb
+            ? 520 + localRng() * 460
+            : releaseBurst
+              ? 2000 + localRng() * 1300
+              : tapStartle
+                ? 760 + localRng() * 420
+                : 420 + localRng() * 320;
+        const jitter = releaseBurst ? body.rx * .55 : holdAbsorb ? 22 + localRng() * 30 : tapStartle ? 8 + localRng() * 14 : 12 + localRng() * (longPress ? 24 : 18);
+        const sx = releaseBurst ? body.x + (localRng() - .5) * body.rx * .95 : x + (localRng() - .5) * jitter;
+        const sy = releaseBurst ? body.y + body.ry * (.44 + localRng() * .18) : y + (localRng() - .5) * jitter;
+        const outwardAngle = Math.atan2(sy - y, sx - x) + (localRng() - .5) * 1.4;
+        const outwardDistance = (10 + localRng() * 24) * (tapStartle ? 1 : 0);
+        const target = expel ? { x: body.x, y: body.y } : getDigestiveTarget(sx, sy);
+        const endX = expel
+          ? body.x + (localRng() - .45) * body.rx * (releaseBurst ? 1.18 : 1.45)
+          : tapStartle
+            ? sx + Math.cos(outwardAngle) * outwardDistance
+          : target.x + (localRng() - .5) * body.rx * (holdAbsorb || longPress ? .12 : .20);
+        const endY = expel
+          ? body.y + body.ry * (releaseBurst ? 1.12 + localRng() * .72 : .95 + localRng() * .56)
+          : tapStartle
+            ? sy + Math.sin(outwardAngle) * outwardDistance * .72
+          : target.y + (localRng() - .5) * body.ry * (holdAbsorb || longPress ? .12 : .20);
+
+        interactionBursts.push({
+          x0: sx,
+          y0: sy,
+          x1: tapStartle ? sx + Math.cos(outwardAngle) * outwardDistance * .34 + (localRng() - .5) * 6 : sx + ((expel ? body.x : target.x) - sx) * ((holdAbsorb ? .50 : .24) + localRng() * .18) + (localRng() - .5) * (releaseBurst ? 34 : holdAbsorb ? 18 : 38),
+          y1: tapStartle ? sy + Math.sin(outwardAngle) * outwardDistance * .22 + (localRng() - .5) * 4 : sy + ((expel ? body.y : target.y) - sy) * ((holdAbsorb ? .46 : .18) + localRng() * .16) + (localRng() - .5) * (releaseBurst ? 22 : holdAbsorb ? 16 : 34),
+          x2: tapStartle ? sx + Math.cos(outwardAngle) * outwardDistance * .76 + (localRng() - .5) * 7 : expel ? body.x + (localRng() - .5) * body.rx * (releaseBurst ? .64 : .90) : target.x + (localRng() - .5) * body.rx * (holdAbsorb || longPress ? .14 : .26),
+          y2: tapStartle ? sy + Math.sin(outwardAngle) * outwardDistance * .50 + (localRng() - .5) * 5 : expel ? body.y + body.ry * (releaseBurst ? .74 + localRng() * .34 : .58 + localRng() * .35) : target.y + (localRng() - .5) * body.ry * (holdAbsorb || longPress ? .14 : .26),
+          x3: endX,
+          y3: endY,
+          char: glyphList[Math.floor(localRng() * glyphList.length)],
+          start,
+          duration,
+          expel,
+          rot: (localRng() - .5) * Math.PI,
+          size: 1.65 + Math.pow(localRng(), 1.55) * (longPress ? 4.4 : holdAbsorb ? 3.2 : releaseBurst ? 4.6 : tapStartle ? 2.6 : 3.2),
+          alpha: (longPress ? .16 : holdAbsorb ? .13 : releaseBurst ? .16 : tapStartle ? .08 : .12) + localRng() * (longPress ? .13 : holdAbsorb ? .10 : releaseBurst ? .18 : tapStartle ? .07 : .10),
+          side: (localRng() - .5) * (longPress ? 28 : holdAbsorb ? 16 : releaseBurst ? 22 : tapStartle ? 5 : 15)
+        });
+      }
+      if (interactionBursts.length > 140) interactionBursts.splice(0, interactionBursts.length - 140);
+
+      pointer.touchX = x;
+      pointer.touchY = y;
+      pointer.tapHeat = clamp(pointer.tapHeat + (longPress ? .42 : holdAbsorb ? .10 : releaseBurst ? .16 : immediateTouch ? .38 : .28), 0, 1);
+      pointer.pressHeat = clamp(pointer.pressHeat + (longPress ? .72 : holdAbsorb ? .18 : releaseBurst ? .16 : immediateTouch ? .24 : .22), 0, 1);
+      pointer.wetHeat = clamp(pointer.wetHeat + (longPress ? .76 : holdAbsorb ? .16 : releaseBurst ? .10 : immediateTouch ? .32 : .22), 0, 1);
+      pointer.longSignalHeat = clamp(pointer.longSignalHeat + (longPress ? .78 : holdAbsorb ? .10 : releaseBurst ? .10 : 0), 0, 1);
+      pointer.releaseHeat = clamp(pointer.releaseHeat + (releaseBurst ? .95 : 0), 0, 1);
+      lastBurstAt = start;
+    }
+
+    function spawnInstantRecoil(x, y) {
+      if (!body) return;
+      const glyphList = ["[12]", "DOI", "et al.", "pp.", "Q1", "SSCI", "h-index", "0", "1", "[", "]", "."];
+      const start = performance.now();
+      const count = 4 + Math.floor(Math.random() * 4);
+      for (let i = 0; i < count; i++) {
+        const sx = x + (Math.random() - .5) * 10;
+        const sy = y + (Math.random() - .5) * 9;
+        const angle = Math.atan2(sy - y, sx - x) + (Math.random() - .5) * 1.15;
+        const dist = 7 + Math.random() * 15;
+        instantBursts.push({
+          x0: sx,
+          y0: sy,
+          x1: sx + Math.cos(angle) * dist * .34 + (Math.random() - .5) * 5,
+          y1: sy + Math.sin(angle) * dist * .22 + (Math.random() - .5) * 4,
+          x2: sx + Math.cos(angle) * dist * .72 + (Math.random() - .5) * 7,
+          y2: sy + Math.sin(angle) * dist * .48 + (Math.random() - .5) * 5,
+          x3: sx + Math.cos(angle) * dist,
+          y3: sy + Math.sin(angle) * dist * .72,
+          char: glyphList[Math.floor(Math.random() * glyphList.length)],
+          start,
+          duration: 620 + Math.random() * 420,
+          alpha: .060 + Math.random() * .082,
+          size: 1.45 + Math.random() * 1.85,
+          rot: (Math.random() - .5) * Math.PI,
+          spin: (Math.random() - .5) * .38
+        });
+      }
+      if (instantBursts.length > 42) instantBursts.splice(0, instantBursts.length - 42);
+      lastBurstAt = start;
+      startInstantFrame();
+    }
+
+    function startInstantFrame() {
+      if (instantFrameRunning) return;
+      instantFrameRunning = true;
+      instantFrameLast = 0;
+      requestAnimationFrame(drawInstantFrame);
+    }
+
+    function drawInstantFrame(time) {
+      if (time - instantFrameLast < instantFrameMs) {
+        requestAnimationFrame(drawInstantFrame);
+        return;
+      }
+      instantFrameLast = time;
+      interactionCtx.clearRect(0, 0, width, height);
+      instantBursts = instantBursts.filter((burst) => time - burst.start < burst.duration + 360);
+
+      for (const burst of instantBursts) {
+        const raw = clamp((time - burst.start) / burst.duration, 0, 1);
+        const fade = clamp(1 - Math.max(0, time - burst.start - burst.duration) / 360, 0, 1);
+        const t = 1 - Math.pow(1 - raw, 2.05);
+        const x = cubic(burst.x0, burst.x1, burst.x2, burst.x3, t);
+        const y = cubic(burst.y0, burst.y1, burst.y2, burst.y3, t);
+
+        interactionCtx.save();
+        interactionCtx.translate(x, y);
+        interactionCtx.rotate(burst.rot + burst.spin * t);
+        interactionCtx.globalAlpha = burst.alpha * fade * (1 - raw * .28);
+        interactionCtx.fillStyle = burst.char.length > 1 ? "rgba(54,45,37,.34)" : "rgba(27,23,20,.34)";
+        interactionCtx.shadowColor = "rgba(22,16,13,.12)";
+        interactionCtx.shadowBlur = .45 + raw * .85;
+        interactionCtx.font = `${burst.char.length > 3 ? 470 : 540} ${burst.size * (burst.char.length > 3 ? .72 : 1)}px "Times New Roman", Times, serif`;
+        interactionCtx.fillText(burst.char, 0, 0);
+        interactionCtx.restore();
+      }
+
+      if (instantBursts.length) {
+        requestAnimationFrame(drawInstantFrame);
+      } else {
+        instantFrameRunning = false;
+        interactionCtx.clearRect(0, 0, width, height);
+      }
+    }
+
+    function spawnReleaseWaste(x, y, strength = 1) {
+      pointer.releaseHeat = clamp(pointer.releaseHeat + .75 * strength, 0, 1);
+      debugState.releaseWasteTriggered = true;
+      debugLog("release / bibliographic waste", { strength });
+      spawnInteractionBurst("release", x, y);
+    }
+
+    function drawInteractionBursts(time, breath) {
+      interactionBursts = interactionBursts.filter((burst) => time - burst.start < burst.duration + 650);
+      for (const burst of interactionBursts) {
+        const raw = clamp((time - burst.start) / burst.duration, 0, 1);
+        const fade = clamp(1 - Math.max(0, time - burst.start - burst.duration) / 650, 0, 1);
+        const t = burst.expel ? Math.pow(raw, 1.08) : Math.pow(raw, .74);
+        const x = cubic(burst.x0, burst.x1, burst.x2, burst.x3, t);
+        const y = cubic(burst.y0, burst.y1, burst.y2, burst.y3, t);
+        const nx = cubic(burst.x0, burst.x1, burst.x2, burst.x3, clamp(t + .02, 0, 1));
+        const ny = cubic(burst.y0, burst.y1, burst.y2, burst.y3, clamp(t + .02, 0, 1));
+        const angle = Math.atan2(ny - y, nx - x);
+        const metabolicPull = burst.expel ? currentBreath.expel : currentBreath.digest;
+        const side = Math.sin(raw * Math.PI * 2 + burst.rot) * burst.side * (1 - raw * (.46 + metabolicPull * .18));
+
+        ctx.save();
+        ctx.translate(x + Math.sin(angle + Math.PI / 2) * side, y - Math.cos(angle + Math.PI / 2) * side * .5);
+        ctx.rotate(angle + burst.rot * (1 - raw * .65));
+        ctx.globalAlpha = clamp(burst.alpha * fade * (1 - raw * .18) + breath * .008 + metabolicPull * .030, .035, .36);
+        ctx.fillStyle = burst.expel ? "rgba(58,49,39,.34)" : "rgba(38,32,27,.32)";
+        ctx.shadowColor = "rgba(20,15,12,.20)";
+        ctx.shadowBlur = .8 + raw * 1.7 + metabolicPull * 1.2;
+        ctx.font = `${burst.char.length > 3 ? 470 : 540} ${burst.size * (burst.char.length > 3 ? .72 : 1) * (1 - raw * .08)}px "Times New Roman", Times, serif`;
+        ctx.fillText(burst.char, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function drawTouchResponse(time) {
+      const strength = clamp(pointer.tapHeat * .48 + pointer.pressHeat * .68 + pointer.longSignalHeat * .44 + pointer.releaseHeat * .22, 0, 1);
+      if (strength < .025) return;
+
+      const x = pointer.touchX || body.x;
+      const y = pointer.touchY || body.y;
+      const hold = pointer.downActive && pointer.longPress ? .34 : 0;
+      const radius = body.rx * (.095 + strength * .115 + hold * .060);
+      const wet = ctx.createRadialGradient(x, y, 0, x, y, radius);
+      wet.addColorStop(0, `rgba(10, 7, 6, ${.060 + strength * .155 + hold * .105})`);
+      wet.addColorStop(.36, `rgba(43, 30, 26, ${.040 + strength * .090})`);
+      wet.addColorStop(.72, `rgba(82, 72, 45, ${.018 + strength * .040})`);
+      wet.addColorStop(1, "rgba(0,0,0,0)");
+
+      ctx.save();
+      ctx.globalCompositeOperation = "multiply";
+      ctx.fillStyle = wet;
+      ctx.beginPath();
+      ctx.ellipse(x, y, radius * 1.02, radius * .62, Math.sin(time * .0004) * .35, 0, Math.PI * 2);
+      ctx.fill();
+      if (pointer.longSignalHeat > .035 || pointer.releaseHeat > .035) {
+        const signal = Math.max(pointer.longSignalHeat, pointer.releaseHeat * .65);
+        const inner = ctx.createRadialGradient(x, y, 0, x, y, radius * .58);
+        inner.addColorStop(0, `rgba(4,3,3,${.080 + signal * .145})`);
+        inner.addColorStop(.42, `rgba(35,24,20,${.040 + signal * .085})`);
+        inner.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = inner;
+        ctx.beginPath();
+        ctx.ellipse(x + Math.sin(time * .0011) * radius * .04, y + Math.cos(time * .0013) * radius * .025, radius * .48, radius * .30, -.28 + Math.sin(time * .0007) * .16, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function updateLongPressAbsorption(time) {
+      if (!pointer.downActive || !pointer.longPress || !body) return;
+      pointer.downStrength = clamp(pointer.downStrength + .028, 0, 1);
+      pointer.pressHeat = clamp(pointer.pressHeat + .034, 0, 1);
+      pointer.wetHeat = clamp(pointer.wetHeat + .026, 0, 1);
+      pointer.longSignalHeat = clamp(pointer.longSignalHeat + .016, 0, 1);
+      pointer.heat = clamp(pointer.heat + .026, 0, 1);
+      const interval = 300 + Math.sin(time * .0011) * 44 - currentBreath.digest * 42;
+      if (time - lastHoldAbsorbAt < interval) return;
+      lastHoldAbsorbAt = time;
+      debugState.holdAbsorptionTriggered = true;
+      debugState.holdBurstCount += 1;
+      const target = getDigestiveTarget(pointer.touchX || body.x, pointer.touchY || body.y);
+      const pullX = pointer.touchX + (target.x - pointer.touchX) * (.18 + Math.random() * .24) + (Math.random() - .5) * body.rx * .32;
+      const pullY = pointer.touchY + (target.y - pointer.touchY) * (.18 + Math.random() * .24) + (Math.random() - .5) * body.ry * .30;
+      debugLog("hold absorption burst", { pullX: Number(pullX.toFixed(1)), pullY: Number(pullY.toFixed(1)) });
+      markInteractionPriority(700);
+      spawnInteractionBurst("hold", pullX, pullY);
+    }
+
+    function drawLifeMotes(time, breath) {
+      for (const mote of lifeMotes) {
+        const local = time * mote.speed + mote.phase;
+        const twitch = Math.pow((Math.sin(time * mote.twitchSpeed + mote.twitchPhase) + 1) / 2, 4.6);
+        const pulse = Math.pow((Math.sin(local * 1.30) + 1) / 2, 1.35);
+        const inhale = (pulse - .5) * mote.direction;
+        const edge = mote.edge + inhale * (.026 + currentBreath.organ * .020);
+        const angle = mote.angle + Math.sin(local * .70) * .011;
+        const tangent = Math.sin(local * .70) * mote.drift * (.24 + currentBreath.digest * .17) + Math.sin(time * mote.twitchSpeed * .92 + mote.phase) * mote.twitchAmp * twitch;
+        const nx = Math.cos(angle);
+        const ny = Math.sin(angle);
+        const tx = -ny;
+        const ty = nx;
+        const x = body.x + nx * body.rx * edge + tx * tangent;
+        const y = body.y + ny * body.ry * edge + ty * tangent * .46;
+        if (!isPointVisible(x, y, 100)) continue;
+        const nearCore = clamp(1.22 - edge, 0, 1);
+        const touchDx = (x - pointer.touchX) / (body.rx * .68);
+        const touchDy = (y - pointer.touchY) / (body.ry * .58);
+        const touchInfluence = pointer.downActive && pointer.longPress
+          ? clamp(1 - touchDx * touchDx - touchDy * touchDy, 0, 1) * pointer.downStrength
+          : 0;
+
+        ctx.save();
+        ctx.translate(
+          x + Math.sin(time * .0034 + mote.phase) * touchInfluence * 2.2,
+          y + Math.cos(time * .0030 + mote.phase) * touchInfluence * 1.5
+        );
+        ctx.rotate(mote.rot + angle + Math.sin(local) * .048 + twitch * .038 + touchInfluence * Math.sin(time * .0042 + mote.phase) * .18);
+        ctx.globalAlpha = clamp(mote.alpha + pulse * .030 + twitch * .030 + currentBreath.digest * .028 + breath * .010 + touchInfluence * .12, .030, .25);
+        ctx.fillStyle = mote.char.length > 1 ? "rgba(58,50,40,.26)" : "rgba(34,29,24,.34)";
+        ctx.shadowColor = "rgba(30,24,18,.18)";
+        ctx.shadowBlur = .7 + nearCore * 1.8 + touchInfluence * 2.6;
+        ctx.font = `${mote.char.length > 1 ? 480 : 540} ${mote.size * (mote.char.length > 1 ? .72 : 1) * (1 + touchInfluence * .12)}px "Times New Roman", Times, serif`;
+        ctx.fillText(mote.char, 0, 0);
+        ctx.restore();
+      }
+    }
+
+    function drawHoleEdges(time, breath) {
+      const openingLife = Math.pow(1 - getStartupEase(time), 1.45);
+      for (const hole of body.holes) {
+        if (!isPointVisible(hole.x, hole.y, Math.max(hole.rx, hole.ry) * 2.8 + 80)) continue;
+        const primary = hole.primary ? 1 : 0;
+        const keyHole = primary && hole.primaryOrder < 3 ? 1 : 0;
+        const phaseOffset = primary ? hole.metabolicPhase : 0;
+        const asyncSpeed = .000115 + (hole.primaryOrder || 0) * .000031 + (hole.rx + hole.ry) * .0000010;
+        const holeBreath = Math.pow((Math.sin(time * asyncSpeed + hole.phase + phaseOffset * 1.17) + 1) / 2, 1.34);
+        const keyBreath = keyHole ? Math.pow((Math.sin(time * (.00033 + hole.primaryOrder * .000057) + hole.phase + phaseOffset * 1.83) + 1) / 2, 2.15) : 0;
+        const localDark = Math.pow((Math.sin(time * hole.darkSpeed + hole.darkPhase + phaseOffset) + 1) / 2, primary ? 3.05 : 3.6);
+        const touchDx = (hole.x - (pointer.touchX || body.x)) / (body.rx * .36);
+        const touchDy = (hole.y - (pointer.touchY || body.y)) / (body.ry * .30);
+        const touchLocality = clamp(1 - touchDx * touchDx - touchDy * touchDy, 0, 1);
+        const touchDark = touchLocality * (pointer.pressHeat * .42 + pointer.tapHeat * .18 + pointer.longSignalHeat * .16);
+        const metabolicDark = primary * (currentBreath.digest * .52 + currentBreath.ingest * .10 + currentBreath.organ * .10 + currentBreath.expel * .06) + keyBreath * .10 + keyHole * openingLife * .11;
+        const count = Math.round(12 + (hole.rx + hole.ry) * (.36 + primary * .10 + keyHole * .035));
+        if (keyHole) {
+          const cavityBreath = clamp(.18 + holeBreath * .20 + keyBreath * .28 + metabolicDark * .48 + currentBreath.digest * .10 * keyHole, 0, .86);
+          ctx.save();
+          ctx.translate(hole.x, hole.y);
+          ctx.rotate(Math.sin(time * .000095 + hole.phase) * .045 + (hole.primaryOrder || 0) * .18);
+          ctx.globalCompositeOperation = "multiply";
+          const wet = ctx.createRadialGradient(
+            -hole.rx * .18, -hole.ry * .18, 0,
+            0, 0, Math.max(hole.rx, hole.ry) * 1.34
+          );
+          wet.addColorStop(0, `rgba(12,9,8,${.16 + cavityBreath * .20 + currentBreath.digest * .030})`);
+          wet.addColorStop(.38, `rgba(42,31,29,${.08 + cavityBreath * .12 + currentBreath.digest * .020})`);
+          wet.addColorStop(.68, `rgba(112,88,73,${.030 + cavityBreath * .045})`);
+          wet.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = wet;
+          ctx.shadowColor = "rgba(10,6,5,.25)";
+          ctx.shadowBlur = 2.4 + cavityBreath * 3.8 + currentBreath.digest * 1.4;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, hole.rx * (1.12 + keyBreath * .045), hole.ry * (1.06 + holeBreath * .050), 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.globalCompositeOperation = "source-over";
+          ctx.globalAlpha = .18 + cavityBreath * .22;
+          ctx.strokeStyle = "rgba(238,223,199,.28)";
+          ctx.lineWidth = .42 + cavityBreath * .35;
+          ctx.beginPath();
+          ctx.ellipse(-hole.rx * .06, -hole.ry * .10, hole.rx * .84, hole.ry * .70, 0, Math.PI * .94, Math.PI * 1.72);
+          ctx.stroke();
+          ctx.restore();
+        }
+        for (let i = 0; i < count; i++) {
+          const core = clamp(1 - ((hole.x - body.x) / body.rx) ** 2 - ((hole.y - body.y) / body.ry) ** 2, 0, 1);
+          const corePulse = Math.pow(core, 1.7);
+          const a = i / count * Math.PI * 2 + Math.sin(time * .00013 + hole.phase) * (.020 + primary * .010) * corePulse;
+          const wobble = 1 + Math.sin(a * 5 + time * .00017 + hole.phase) * (.030 + holeBreath * (.044 + primary * .026 + keyBreath * .018) * corePulse);
+          const x = hole.x + Math.cos(a) * hole.rx * wobble;
+          const y = hole.y + Math.sin(a) * hole.ry * wobble;
+          ctx.save();
+          ctx.translate(x, y);
+          ctx.rotate(a + Math.PI / 2);
+          ctx.globalAlpha = .23 + holeBreath * (.12 + primary * .04) * corePulse + keyBreath * .090 * corePulse + (localDark + metabolicDark) * .18 * corePulse + touchDark * .13 * corePulse + breath * .010;
+          ctx.fillStyle = i % 13 === 0 ? "rgba(24,91,101,.32)" : i % 9 === 0 ? "rgba(86,87,43,.31)" : `rgba(${18 - (localDark + touchDark + metabolicDark) * 7},${16 - (localDark + touchDark + metabolicDark) * 6},${14 - (localDark + touchDark + metabolicDark) * 6},${.43 + localDark * .17 + metabolicDark * .18 + touchDark * .12})`;
+          ctx.shadowColor = "rgba(0,0,0,.34)";
+          ctx.shadowBlur = .8 + holeBreath * (2.0 + primary * .9) * corePulse + keyBreath * 2.15 * corePulse + (localDark + metabolicDark) * 3.0 * corePulse + touchDark * 2.8 * corePulse;
+          ctx.font = `${580} ${(3.8 + Math.sin(i + time * .00013) * .20 + holeBreath * (1.18 + primary * .44 + keyBreath * .50) * corePulse + metabolicDark * .72) * .74}px "Times New Roman", Times, serif`;
+          ctx.fillText(i % 4 === 0 ? "0" : i % 4 === 1 ? "[" : i % 4 === 2 ? "8" : ")", 0, 0);
+          ctx.restore();
+        }
+      }
+    }
+
+    function drawFrame(time) {
+      const interactionActive =
+        pointer.downActive ||
+        pointer.tapHeat > .035 ||
+        pointer.pressHeat > .040 ||
+        pointer.releaseHeat > .035 ||
+        pointer.longSignalHeat > .040 ||
+        interactionBursts.length > 0;
+      const interactionPriority = time < interactionPriorityUntil;
+      const scrolling = scrollSettle > .34;
+      const currentFrameMs = interactionActive ? interactionFrameMs : idleFrameMs;
+      paper.classList.toggle("is-interacting", interactionActive);
+      paper.classList.toggle("is-scrolling", scrolling);
+      if (time - last < currentFrameMs) {
+        requestAnimationFrame(drawFrame);
+        return;
+      }
+      if (last) {
+        drawFpsLast = 1000 / (time - last);
+        drawFpsSamples.push(drawFpsLast);
+        if (drawFpsSamples.length > 240) drawFpsSamples.shift();
+      }
+      drawFrameCount++;
+      frameToggle++;
+      last = time - ((time - last) % currentFrameMs);
+      updateViewBounds();
+      scrollSettle *= .86;
+      pointer.tapHeat *= .88;
+      pointer.pressHeat *= pointer.downActive ? .985 : .955;
+      pointer.wetHeat *= pointer.downActive ? .988 : .955;
+      pointer.longSignalHeat *= pointer.downActive ? .978 : .920;
+      pointer.downStrength *= pointer.downActive ? .985 : .930;
+      pointer.releaseHeat *= .948;
+      organReflex *= pointer.downActive ? .982 : .948;
+      updateLongPressAbsorption(time);
+      const activity = 1 - scrollSettle * .58;
+      currentBreath = getBreathState(time, activity);
+      const upperPlumeTarget = clamp(.40 + currentBreath.ingest * .24 + currentBreath.digest * .12 + currentBreath.organ * .12 + currentBreath.membrane * .08 - scrollSettle * .20, .32, .82);
+      upperPlumeDensity += (upperPlumeTarget - upperPlumeDensity) * .08;
+      const startupEase = getStartupEase(time);
+      const startupLife = 1 - startupEase;
+      const breath = currentBreath.breath;
+      pointer.heat *= .94;
+      const heat = (pointer.active ? Math.max(pointer.heat, .18) : pointer.heat) + pointer.tapHeat * .18 + pointer.pressHeat * .34;
+      if (organism) {
+        const openingLife = Math.pow(startupLife, 1.35);
+        organism.style.setProperty("--organ-reflex", organReflex.toFixed(3));
+        organism.style.setProperty("--touch-wet-a", (pointer.wetHeat * .38 + currentBreath.membrane * .066 + openingLife * .072).toFixed(3));
+        organism.style.setProperty("--touch-wet-b", (pointer.wetHeat * .28 + currentBreath.membrane * .050 + openingLife * .052).toFixed(3));
+      }
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.globalCompositeOperation = "source-over";
+
+      const backgroundStride = scrolling ? 4 : interactionPriority ? 4 : interactionActive ? 2 : 3;
+      const denseStride = scrolling ? 5 : interactionPriority ? 4 : interactionActive ? 3 : 4;
+      const drawBackground = interactionPriority
+        ? frameToggle % 2 === 0
+        : (!scrolling || interactionActive || frameToggle % 2 === 0);
+
+      for (let i = frameToggle % backgroundStride; i < tendrils.length; i += backgroundStride) {
+        const tendril = tendrils[i];
+        drawTendril(tendril, time, breath, heat);
+        if (interactionActive || frameToggle % 2 === 0) drawPulledFragments(tendril, time, breath);
+      }
+      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawSwallowStreams(time, breath);
+      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawAbsorbedFragments(time, breath);
+      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawUpperBridgeParticles(time, breath);
+      if (drawBackground) drawMutationRopes(time, breath);
+      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawSpiderWebs(time, breath);
+      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawMutationSheets(time, breath);
+      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawContactScars(time, breath);
+      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawEdgeCrumbs(time, breath);
+      drawExpelledWaste(time, breath);
+      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawLowerRightResidue(time, breath);
+      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawLifeMotes(time, breath);
+      drawClotMass(time, breath, heat);
+
+      for (let i = frameToggle % denseStride; i < residues.length; i += denseStride) {
+        const particle = residues[i];
+        if (!isPointVisible(particle.x, particle.y, 110)) continue;
+        const local = time * (.000025 + startupEase * .000036) + particle.phase;
+        const motionGate = .16 + startupEase * .40;
+        const syncBreath = breath * .38 + currentBreath.organ * .62;
+        ctx.save();
+        ctx.translate(
+          particle.x + Math.cos(local) * particle.amp * .022 * motionGate,
+          particle.y + Math.sin(local * .75) * particle.amp * .022 * motionGate
+        );
+        ctx.rotate(particle.rot + Math.sin(local) * .010 * motionGate);
+        ctx.globalAlpha = .105 + syncBreath * .034;
+        ctx.fillStyle = particle.color;
+        ctx.font = `560 ${particle.size}px "Times New Roman", Times, serif`;
+        ctx.fillText(particle.char, 0, 0);
+        ctx.restore();
+      }
+
+      for (let i = frameToggle % denseStride; i < nuclei.length; i += denseStride) {
+        if (!isPointVisible(nuclei[i].x, nuclei[i].y, 120)) continue;
+        drawTextParticle(nuclei[i], time, breath, heat);
+      }
+      drawHoleEdges(time, breath);
+      drawTouchResponse(time);
+      drawInteractionBursts(time, breath);
+      publishStats();
+
+      requestAnimationFrame(drawFrame);
+    }
+
+    function updatePointerFromEvent(event) {
+      const rect = paper.getBoundingClientRect();
+      pointer.x = event.clientX - rect.left;
+      pointer.y = event.clientY - rect.top;
+      if (body) {
+        const dx = (pointer.x - body.x) / (body.rx * 1.95);
+        const dy = (pointer.y - body.y) / (body.ry * 2.05);
+        const nearBody = dx * dx + dy * dy < 1.85;
+        const lowerInfectionZone = pointer.y > height * .44 && pointer.y < height * .94 && pointer.x > width * .08 && pointer.x < width * .96;
+        const leftTendrilZone = pointer.y > height * .48 && pointer.y < height * .76 && pointer.x < width * .58;
+        pointer.active = nearBody || lowerInfectionZone || leftTendrilZone;
+      } else {
+        pointer.active = pointer.y > height * .45;
+      }
+      return pointer.active;
+    }
+
+    paper.addEventListener("pointermove", (event) => {
+      updatePointerFromEvent(event);
+      pointer.heat = pointer.active ? clamp(pointer.heat + .08, 0, 1) : pointer.heat;
+    }, { passive: true });
+
+    paper.addEventListener("pointerdown", (event) => {
+      updatePointerFromEvent(event);
+      debugState.pointerdownDetected = true;
+      debugState.pointerdownCount += 1;
+      debugLog("pointerdown", { pointerId: event.pointerId, pointerType: event.pointerType || "unknown", active: pointer.active });
+      pointer.down = pointer.active;
+      pointer.downActive = pointer.active;
+      pointer.longPress = false;
+      pointer.immediateTouch = false;
+      pointer.pointerId = pointer.active ? event.pointerId : null;
+      lastHoldAbsorbAt = 0;
+      pointer.downAt = performance.now();
+      pointer.touchX = pointer.x;
+      pointer.touchY = pointer.y;
+      if (pressTimer) window.clearTimeout(pressTimer);
+      if (!pointer.active) return;
+      if (event.cancelable) event.preventDefault();
+      if (paper.setPointerCapture && event.pointerId !== undefined) {
+        try { paper.setPointerCapture(event.pointerId); } catch (error) {}
+      }
+      markInteractionPriority(1100);
+      pointer.downStrength = clamp(pointer.downStrength + .30, 0, 1);
+      pointer.heat = clamp(pointer.heat + .18, 0, 1);
+      pointer.immediateTouch = true;
+      debugState.immediateTouchFeedback = true;
+      debugLog("immediate touch feedback");
+      showInteractiveObject(pointer.x, pointer.y);
+    }, { passive: false });
+
+    function finishPointer(event) {
+      const wasDown = pointer.downActive || pointer.down;
+      const wasActive = pointer.downActive;
+      const wasLong = pointer.longPress;
+      const hadImmediateTouch = pointer.immediateTouch;
+      if (event) updatePointerFromEvent(event);
+      if (pressTimer) window.clearTimeout(pressTimer);
+      pressTimer = 0;
+      if (pointer.pointerId !== null && paper.releasePointerCapture) {
+        try { paper.releasePointerCapture(pointer.pointerId); } catch (error) {}
+      }
+      if (event && event.type === "pointercancel") {
+        debugState.pointercancelDetected = true;
+        debugState.pointercancelCount += 1;
+        debugLog("pointercancel", { wasDown, wasLong });
+      } else {
+        debugState.releaseDetected = true;
+        debugState.releaseCount += 1;
+        debugLog("pointerup / release", { wasDown, wasLong });
+      }
+      if (wasActive && !hadImmediateTouch) showInteractiveObject(pointer.touchX || pointer.x, pointer.touchY || pointer.y);
+      pointer.down = false;
+      pointer.downActive = false;
+      pointer.longPress = false;
+      pointer.immediateTouch = false;
+      pointer.pointerId = null;
+      pointer.active = false;
+    }
+
+    paper.addEventListener("pointerup", finishPointer, { passive: true });
+    paper.addEventListener("pointercancel", finishPointer, { passive: true });
+
+    paper.addEventListener("click", (event) => {
+      if (!updatePointerFromEvent(event)) return;
+      markInteractionPriority(700);
+      showInteractiveObject(pointer.x, pointer.y);
+    }, { passive: true });
+
+    paper.addEventListener("contextmenu", (event) => {
+      if (updatePointerFromEvent(event)) event.preventDefault();
+    });
+
+    paper.addEventListener("selectstart", (event) => {
+      if (pointer.down || pointer.active) event.preventDefault();
+    });
+
+    paper.addEventListener("pointerleave", () => {
+      if (pressTimer) window.clearTimeout(pressTimer);
+      pressTimer = 0;
+      if (!pointer.downActive) {
+        pointer.down = false;
+        pointer.longPress = false;
+      }
+      pointer.active = false;
+    });
+
+    window.addEventListener("scroll", () => {
+      scrollSettle = 1;
+      if (scrollTimer) window.clearTimeout(scrollTimer);
+      scrollTimer = window.setTimeout(() => {
+        scrollSettle = Math.max(scrollSettle, .28);
+      }, 180);
+    }, { passive: true });
+
+    const resizeObserver = new ResizeObserver(resize);
+    resizeObserver.observe(paper);
+    buildReferenceMildew();
+    resize();
+    requestAnimationFrame(drawFrame);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", boot, { once: true });
+  } else {
+    boot();
+    
+    /* =========================
+      SAFE ADD-ON PATCH LAYER
+      (non-invasive enhancement)
+      ========================= */
+
+    /* 1. Resize fix for both canvases */
+    function resizeCanvases() {
+      const paper = document.querySelector('.paper');
+      const lesion = document.getElementById('lesionCanvas');
+      const interaction = document.getElementById('interactionCanvas');
+
+      if (!paper || !lesion || !interaction) return;
+
+      const rect = paper.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      [lesion, interaction].forEach(canvas => {
+        canvas.width = rect.width * dpr;
+        canvas.height = rect.height * dpr;
+        canvas.style.width = rect.width + 'px';
+        canvas.style.height = rect.height + 'px';
+
+        const ctx = canvas.getContext('2d');
+        if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      });
+    }
+
+    /* 2. Warm-up renderer (prevents first interaction lag) */
+    function warmUpGPU() {
+      const canvas = document.getElementById('lesionCanvas');
+      if (!canvas) return;
+
+      const ctx = canvas.getContext('2d');
+
+      // dummy warm-up draw (safe, invisible)
+      for (let i = 0; i < 20; i++) {
+        ctx.beginPath();
+        ctx.arc(Math.random() * 100, Math.random() * 100, 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    /* 3. Touch latency reduction (important for iPad exhibition) */
+    function enableLowLatencyTouch() {
+      document.addEventListener('touchstart', () => {}, { passive: true });
+      document.addEventListener('touchmove', () => {}, { passive: true });
+    }
+
+    /* 4. Boot enhancer (non-invasive hook) */
+    function enhancedBoot() {
+      resizeCanvases();
+      warmUpGPU();
+      enableLowLatencyTouch();
+    }
+
+    /* auto bind */
+    window.addEventListener('load', () => {
+      enhancedBoot();
+    });
+
+    window.addEventListener('resize', () => {
+      resizeCanvases();
+    });
+
+  }
+})();
+</script>
+</body>
+</html>
