@@ -994,12 +994,9 @@ th {
   }
 }
 
-@media (max-width: 1050px) {
-  .paper {
-    width: 94vw;
-    padding-left: 5.6vw;
-    padding-right: 5.6vw;
-  }
+.paper {
+  width: 990px;
+  height: auto;
 }
 
 @media print {
@@ -1470,6 +1467,11 @@ th {
   }
 
   function boot() {
+    document.documentElement.style.setProperty(
+      '--scale',
+      Math.min(window.innerWidth / 990, 1)
+    );
+    
     const paper = document.querySelector(".paper");
     const canvas = document.getElementById("lesionCanvas");
     const interactionCanvas = document.getElementById("interactionCanvas");
@@ -2646,6 +2648,11 @@ th {
       updateViewBounds();
       buildScene();
       prepareInfectionGradient();
+
+      document.documentElement.style.setProperty(
+        '--scale',
+        Math.min(window.innerWidth / 990, 1)
+      );
     }
 
     function drawTextParticle(particle, time, breath, heat) {
