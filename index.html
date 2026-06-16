@@ -235,12 +235,12 @@ body {
   width: 54%;
   left: 43.8%;
   top: 5.5%;
-  opacity: .70;
+  opacity: calc(0.70 - var(--organ-reflex, 0) * 0.4);
   filter: contrast(.84) saturate(.50) brightness(1.35);
   mix-blend-mode: multiply;
   animation: lesion-membrane-breathe 37s cubic-bezier(.43, 0, .30, 1) infinite;
   animation-delay: -9.6s;
-  scale: calc(1 + var(--organ-reflex, 0) * .0036);
+  scale: calc(1 - var(--organ-reflex, 0) * 0.05);
 }
 
 .lesion-tendrils {
@@ -1305,11 +1305,15 @@ th {
       const tangent = rng() > .5 ? 1 : -1;
       const swirlX = -pullVector.y * tangent;
       const swirlY = pullVector.x * tangent;
+
       const dx = pullVector.x * reach * directed * .74 + swirlX * reach * directed * .22 + (rng() - .5) * reach * (1 - directed * .42);
       const dy = pullVector.y * reach * directed * .74 + swirlY * reach * directed * .22 + (rng() - .5) * reach * (1.00 + severity * .38) * (1 - directed * .36);
+
       const directionalRot = Math.atan2(pullVector.y, pullVector.x) * 24;
+
       const rot = directionalRot * directed + (rng() - .5) * (14 + severity * (options.chaotic ? 185 : 128));
       const scale = 1 + rng() * (.09 + severity * (options.chaotic ? .70 : .48));
+      
       const colorRoll = rng();
       const color =
         colorRoll > .982 ? "rgba(18,104,115,.92)" :
@@ -1382,6 +1386,89 @@ th {
     };
   }
 
+  class Engine {
+    constructor() {
+      this.systems = {};
+      this.lastTime = 0;
+      this.running = false;
+      this.fps = 60;
+
+      this.performance = {
+        intensity: 1,   // 1 = full, 0.4 = low
+        adaptive: true
+      };
+    }
+
+    register(name, system) {
+      this.systems[name] = system;
+    }
+
+    start() {
+      this.running = true;
+      this.lastTime = performance.now();
+      requestAnimationFrame(this.loop.bind(this));
+    }
+
+    loop(t) {
+      if (!this.running) return;
+
+      const delta = t - this.lastTime;
+      this.lastTime = t;
+
+      // 🔥 自动性能检测（核心）
+      this.updatePerformance(delta);
+
+      // 🧠 统一调度所有系统
+      for (const key in this.systems) {
+        const sys = this.systems[key];
+        if (sys && sys.update) {
+          sys.update(delta, this.performance);
+        }
+      }
+
+      requestAnimationFrame(this.loop.bind(this));
+    }
+
+    updatePerformance(delta) {
+      // 简单 FPS 估算
+      const currentFps = 1000 / delta;
+
+      // 平滑处理
+      this.fps = this.fps * 0.9 + currentFps * 0.1;
+
+      if (!this.performance.adaptive) return;
+
+      // 🔻 性能降级逻辑（你已允许）
+      if (this.fps < 30) {
+        this.performance.intensity = 0.55;
+      } else if (this.fps < 45) {
+        this.performance.intensity = 0.75;
+      } else {
+        this.performance.intensity = 1;
+      }
+    }
+  }
+
+  class BioFrameClock {
+    constructor() {
+      this.frame = 0;
+      this.lockChance = 0.35; // 越高越“卡帧”
+      this.jitterChance = 0.22; // 突变概率
+    }
+
+    tick() {
+      this.frame++;
+
+      // 🧠 是否“冻结这一帧”
+      const locked = Math.random() < this.lockChance;
+
+      return {
+        frame: this.frame,
+        locked
+      };
+    }
+  }
+
   function boot() {
     const paper = document.querySelector(".paper");
     const canvas = document.getElementById("lesionCanvas");
@@ -1402,6 +1489,9 @@ th {
 
     const ctx = canvas.getContext("2d", { alpha: true });
     const interactionCtx = interactionCanvas.getContext("2d", { alpha: true });
+
+    let organPulse = 0;
+
     let width = 0;
     let height = 0;
     let dpr = 1;
@@ -1974,6 +2064,11 @@ th {
       }
       markDigestiveHoles();
 
+      let __drawBudget = 0;
+      const MAX_DRAW_BUDGET = 140;
+
+      const MAX_NUCLEI = 800;
+
       nuclei = [];
       const count = Math.round(clamp(width * height / 6700, 205, 335));
       let guard = 0;
@@ -2034,6 +2129,11 @@ th {
           plumePeak: upperFungalZone || midSprayColumn || topJetTip,
           spread: (upperFungalZone ? 1.55 : .8) + localRng() * (upperFungalZone ? 3.7 : 2.8)
         });
+
+          if (nuclei.length > MAX_NUCLEI) {
+            nuclei.splice(0, nuclei.length - MAX_NUCLEI);
+          }
+
       }
 
       upperBridgeParticles = [];
@@ -2109,6 +2209,9 @@ th {
         });
       }
 
+
+      const MAX_RESIDUES = 1200;
+
       residues = [];
       for (let i = 0; i < 190; i++) {
         const angle = localRng() * Math.PI * 2;
@@ -2126,6 +2229,11 @@ th {
           color: localRng() > .94 ? pick(localRng, palette.slice(3)) : "rgba(72,64,51,.17)",
           amp: localRng() * 1.2
         });
+
+          if (residues.length > MAX_RESIDUES) {
+            residues.splice(0, residues.length - MAX_RESIDUES);
+          }
+
       }
 
       edgeCrumbs = [];
@@ -2584,37 +2692,69 @@ th {
       ctx.restore();
     }
 
-    function drawClotMass(time, breath, heat) {
-      const startupEase = getStartupEase(time);
-      for (const clot of clots) {
-        if (!isPointVisible(clot.x, clot.y, 140)) continue;
-        const local = time * (.000032 + startupEase * .000050) + clot.phase;
-        const corePulse = Math.pow(clot.core, 2.1);
-        const organ = currentBreath.organ;
-        const motionGate = .13 + startupEase * .49;
-        const swell = .975 + organ * .064 * corePulse + breath * .034 * corePulse + Math.sin(local * .76) * .007 * corePulse + heat * .012 * corePulse;
-        const x = clot.x + Math.cos(local * .72) * clot.amp * (.016 + organ * .046 * corePulse) * motionGate;
-        const y = clot.y + Math.sin(local * .62) * clot.amp * (.016 + organ * .052 * corePulse) * motionGate;
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(clot.rot + Math.sin(local * .48) * .014 * corePulse * motionGate);
+  function drawClotMass(time, breath, heat) {
+    const startupEase = getStartupEase(time);
+
+    const organScale = 1 + organPulse * 0.12;
+    const organRotate = organPulse * 0.08;
+
+    ctx.save();
+    ctx.translate(body.x, body.y);
+    ctx.scale(organScale, organScale);
+    ctx.rotate(organRotate);
+    ctx.translate(-body.x, -body.y);
+
+    for (const clot of clots) {
+      if (!isPointVisible(clot.x, clot.y, 140)) continue;
+
+      const local = time * (.000032 + startupEase * .000050) + clot.phase;
+      const corePulse = Math.pow(clot.core, 2.1);
+      const organ = currentBreath.organ;
+      const motionGate = .13 + startupEase * .49;
+      const swell =
+        .975 +
+        organ * .064 * corePulse +
+        breath * .034 * corePulse +
+        Math.sin(local * .76) * .007 * corePulse +
+        heat * .012 * corePulse;
+
+      const x =
+        clot.x +
+        Math.cos(local * .72) * clot.amp * (.016 + organ * .046 * corePulse) * motionGate;
+
+      const y =
+        clot.y +
+        Math.sin(local * .62) * clot.amp * (.016 + organ * .052 * corePulse) * motionGate;
+
+      ctx.save();
+      ctx.translate(x, y);
+      ctx.rotate(clot.rot + Math.sin(local * .48) * .014 * corePulse * motionGate);
+
       const form = clot.form || "clot";
-      ctx.scale(swell * (form === "thread" ? 1.38 : form === "spore" ? .92 : 1), swell * (form === "thread" ? .78 : form === "spore" ? 1.08 : 1));
-        const plumeScale = clot.plumePeak ? (.72 + upperPlumeDensity * .28) : 1;
-        ctx.globalAlpha = clamp(clot.alpha * .68 + breath * .038 * corePulse, .026, .20) * plumeScale;
-        ctx.fillStyle = clot.color;
-        ctx.shadowColor = "rgba(0,0,0,.16)";
-        ctx.shadowBlur = .7 + breath * 1.85 * corePulse + (form === "clot" ? .55 : 0);
-        ctx.font = `580 ${clot.size * .68}px "Times New Roman", Times, serif`;
-        ctx.fillText(clot.char, 0, 0);
-        if (form === "clot") {
-          ctx.globalAlpha *= .40;
-          ctx.fillText(clot.char.length > 1 ? "." : clot.char, -(clot.spread || 1) * .45, (clot.spread || 1) * .35);
-          ctx.fillText(".", (clot.spread || 1) * .55, -(clot.spread || 1) * .25);
-        }
-        ctx.restore();
+      ctx.scale(
+        swell * (form === "thread" ? 1.38 : form === "spore" ? .92 : 1),
+        swell * (form === "thread" ? .78 : form === "spore" ? 1.08 : 1)
+      );
+
+      const plumeScale = clot.plumePeak ? (.72 + upperPlumeDensity * .28) : 1;
+      ctx.globalAlpha = clamp(clot.alpha * .68 + breath * .038 * corePulse, .026, .20) * plumeScale;
+      ctx.fillStyle = clot.color;
+      ctx.shadowColor = "rgba(0,0,0,.16)";
+      ctx.shadowBlur = .7 + breath * 1.85 * corePulse + (form === "clot" ? .55 : 0);
+      ctx.font = `580 ${clot.size * .68}px "Times New Roman", Times, serif`;
+      ctx.fillText(clot.char, 0, 0);
+
+      if (form === "clot") {
+        ctx.globalAlpha *= .40;
+        ctx.fillText(clot.char.length > 1 ? "." : clot.char, -(clot.spread || 1) * .45, (clot.spread || 1) * .35);
+        ctx.fillText(".", (clot.spread || 1) * .55, -(clot.spread || 1) * .25);
       }
+
+      ctx.restore();
     }
+
+    ctx.restore();
+  }
 
     function drawUpperBridgeParticles(time, breath) {
       const density = upperPlumeDensity;
@@ -3357,7 +3497,21 @@ th {
       }
     }
 
+    let __bgTick = 0;
+
+    const FRAME_BUDGET = {
+      tendrils: 1,
+      residues: 1,
+      nuclei: 2,
+      background: 2
+    };
+
+    
     function drawFrame(time) {
+
+      organPulse *= 0.92;
+
+      __drawBudget = 0;
       const interactionActive =
         pointer.downActive ||
         pointer.tapHeat > .035 ||
@@ -3365,24 +3519,57 @@ th {
         pointer.releaseHeat > .035 ||
         pointer.longSignalHeat > .040 ||
         interactionBursts.length > 0;
+
       const interactionPriority = time < interactionPriorityUntil;
       const scrolling = scrollSettle > .34;
       const currentFrameMs = interactionActive ? interactionFrameMs : idleFrameMs;
+
       paper.classList.toggle("is-interacting", interactionActive);
       paper.classList.toggle("is-scrolling", scrolling);
+
       if (time - last < currentFrameMs) {
         requestAnimationFrame(drawFrame);
         return;
       }
+
       if (last) {
         drawFpsLast = 1000 / (time - last);
         drawFpsSamples.push(drawFpsLast);
         if (drawFpsSamples.length > 240) drawFpsSamples.shift();
       }
+
       drawFrameCount++;
       frameToggle++;
+      __bgTick = (__bgTick + 1) % 10000;
+
       last = time - ((time - last) % currentFrameMs);
+
+      const state = cf_updateFrameStateAndBuildState(
+        time,
+        interactionActive,
+        interactionPriority,
+        scrolling
+      );
+
+      ctx.clearRect(0, 0, width, height);
+      ctx.globalCompositeOperation = "source-over";
+
+      // L1: INTERACTION（最高优先级）
+      cf_runInteractionLayer(state);
+
+      // L2: BIOLOGICAL（母体 / 病灶）
+      cf_runBiologicalLayer(state);
+
+      // L3: BACKGROUND（背景粒子 / 语义流）
+      cf_runBackgroundLayer(state);
+
+      publishStats();
+      requestAnimationFrame(drawFrame);
+    }
+
+    function cf_updateFrameStateAndBuildState(time, interactionActive, interactionPriority, scrolling) {
       updateViewBounds();
+
       scrollSettle *= .86;
       pointer.tapHeat *= .88;
       pointer.pressHeat *= pointer.downActive ? .985 : .955;
@@ -3391,37 +3578,108 @@ th {
       pointer.downStrength *= pointer.downActive ? .985 : .930;
       pointer.releaseHeat *= .948;
       organReflex *= pointer.downActive ? .982 : .948;
+
       updateLongPressAbsorption(time);
+
       const activity = 1 - scrollSettle * .58;
       currentBreath = getBreathState(time, activity);
-      const upperPlumeTarget = clamp(.40 + currentBreath.ingest * .24 + currentBreath.digest * .12 + currentBreath.organ * .12 + currentBreath.membrane * .08 - scrollSettle * .20, .32, .82);
+
+      const upperPlumeTarget = clamp(
+        .40 +
+        currentBreath.ingest * .24 +
+        currentBreath.digest * .12 +
+        currentBreath.organ * .12 +
+        currentBreath.membrane * .08 -
+        scrollSettle * .20,
+        .32,
+        .82
+      );
       upperPlumeDensity += (upperPlumeTarget - upperPlumeDensity) * .08;
+
       const startupEase = getStartupEase(time);
       const startupLife = 1 - startupEase;
       const breath = currentBreath.breath;
+
       pointer.heat *= .94;
-      const heat = (pointer.active ? Math.max(pointer.heat, .18) : pointer.heat) + pointer.tapHeat * .18 + pointer.pressHeat * .34;
+      const heat =
+        (pointer.active ? Math.max(pointer.heat, .18) : pointer.heat) +
+        pointer.tapHeat * .18 +
+        pointer.pressHeat * .34;
+
       if (organism) {
         const openingLife = Math.pow(startupLife, 1.35);
         organism.style.setProperty("--organ-reflex", organReflex.toFixed(3));
-        organism.style.setProperty("--touch-wet-a", (pointer.wetHeat * .38 + currentBreath.membrane * .066 + openingLife * .072).toFixed(3));
-        organism.style.setProperty("--touch-wet-b", (pointer.wetHeat * .28 + currentBreath.membrane * .050 + openingLife * .052).toFixed(3));
+        organism.style.setProperty(
+          "--touch-wet-a",
+          (pointer.wetHeat * .38 + currentBreath.membrane * .066 + openingLife * .072).toFixed(3)
+        );
+        organism.style.setProperty(
+          "--touch-wet-b",
+          (pointer.wetHeat * .28 + currentBreath.membrane * .050 + openingLife * .052).toFixed(3)
+        );
       }
 
-      ctx.clearRect(0, 0, width, height);
-      ctx.globalCompositeOperation = "source-over";
+      // 这里做一点更明确的“背景降负载”
+      const backgroundStrideBase = scrolling ? 4 : interactionPriority ? 4 : interactionActive ? 2 : 3;
+      const denseStrideBase = scrolling ? 5 : interactionPriority ? 4 : interactionActive ? 3 : 4;
 
-      const backgroundStride = scrolling ? 4 : interactionPriority ? 4 : interactionActive ? 2 : 3;
-      const denseStride = scrolling ? 5 : interactionPriority ? 4 : interactionActive ? 3 : 4;
-      const drawBackground = interactionPriority
-        ? frameToggle % 2 === 0
-        : (!scrolling || interactionActive || frameToggle % 2 === 0);
+      // 交互时 / 滚动时，背景层更保守一些
+      const backgroundStride = interactionActive ? backgroundStrideBase + 1 : backgroundStrideBase;
+      const denseStride = interactionActive ? denseStrideBase + 1 : denseStrideBase;
 
+      const drawBackground =
+        interactionPriority
+          ? frameToggle % 2 === 0
+          : (!scrolling || interactionActive || frameToggle % 2 === 0);
+
+      return {
+        time,
+        interactionActive,
+        interactionPriority,
+        scrolling,
+        startupEase,
+        startupLife,
+        breath,
+        heat,
+        drawBackground,
+        backgroundStride,
+        denseStride
+      };
+    }
+
+    function cf_runInteractionLayer(state) {
+      // 交互优先，不做大循环，只做最直接反馈
+      drawTouchResponse(state.time);
+      drawInteractionBursts(state.time, state.breath);
+    }
+
+    function cf_runBiologicalLayer(state) {
+      // 母体相关：保持稳定生命感
+      drawClotMass(state.time, state.breath, state.heat);
+      drawHoleEdges(state.time, state.breath);
+    }
+
+    function cf_runBackgroundLayer(state) {
+      const time = state.time;
+      const breath = state.breath;
+      const heat = state.heat;
+      const scrolling = state.scrolling;
+      const interactionPriority = state.interactionPriority;
+      const interactionActive = state.interactionActive;
+      const backgroundStride = state.backgroundStride;
+      const denseStride = state.denseStride;
+      const drawBackground = state.drawBackground;
+      const startupEase = state.startupEase;
+
+      // ------- 背景主结构 -------
       for (let i = frameToggle % backgroundStride; i < tendrils.length; i += backgroundStride) {
         const tendril = tendrils[i];
         drawTendril(tendril, time, breath, heat);
-        if (interactionActive || frameToggle % 2 === 0) drawPulledFragments(tendril, time, breath);
+        if (interactionActive || frameToggle % 2 === 0) {
+          drawPulledFragments(tendril, time, breath);
+        }
       }
+
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawSwallowStreams(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawAbsorbedFragments(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawUpperBridgeParticles(time, breath);
@@ -3433,14 +3691,20 @@ th {
       drawExpelledWaste(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawLowerRightResidue(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawLifeMotes(time, breath);
-      drawClotMass(time, breath, heat);
 
-      for (let i = frameToggle % denseStride; i < residues.length; i += denseStride) {
+      // ------- 文字性粒子层 -------
+      const stride = interactionActive ? 3 : 5;
+
+      for (let i = frameToggle % stride; i < residues.length; i += stride)
+      
+      {
         const particle = residues[i];
         if (!isPointVisible(particle.x, particle.y, 110)) continue;
+
         const local = time * (.000025 + startupEase * .000036) + particle.phase;
         const motionGate = .16 + startupEase * .40;
         const syncBreath = breath * .38 + currentBreath.organ * .62;
+
         ctx.save();
         ctx.translate(
           particle.x + Math.cos(local) * particle.amp * .022 * motionGate,
@@ -3454,16 +3718,18 @@ th {
         ctx.restore();
       }
 
-      for (let i = frameToggle % denseStride; i < nuclei.length; i += denseStride) {
+      const textSkip = isMobile ? 2 : 1;
+
+      for (let i = frameToggle % textSkip; i < nuclei.length; i += textSkip)
+      
+      {
         if (!isPointVisible(nuclei[i].x, nuclei[i].y, 120)) continue;
         drawTextParticle(nuclei[i], time, breath, heat);
       }
-      drawHoleEdges(time, breath);
-      drawTouchResponse(time);
-      drawInteractionBursts(time, breath);
-      publishStats();
+    }
 
-      requestAnimationFrame(drawFrame);
+    function triggerOrganPulse() {
+      organPulse = 1;
     }
 
     function updatePointerFromEvent(event) {
@@ -3489,32 +3755,58 @@ th {
     }, { passive: true });
 
     paper.addEventListener("pointerdown", (event) => {
+
+      // 1. 先更新位置（关键）
       updatePointerFromEvent(event);
+
+      // 2. 再判断是否在母体
+      if (pointer.active) {
+        triggerOrganPulse();
+      }
+
+      // 3. 再处理状态系统
       debugState.pointerdownDetected = true;
       debugState.pointerdownCount += 1;
-      debugLog("pointerdown", { pointerId: event.pointerId, pointerType: event.pointerType || "unknown", active: pointer.active });
+
+      debugLog("pointerdown", {
+        pointerId: event.pointerId,
+        pointerType: event.pointerType || "unknown",
+        active: pointer.active
+      });
+
       pointer.down = pointer.active;
       pointer.downActive = pointer.active;
       pointer.longPress = false;
       pointer.immediateTouch = false;
       pointer.pointerId = pointer.active ? event.pointerId : null;
+
       lastHoldAbsorbAt = 0;
       pointer.downAt = performance.now();
       pointer.touchX = pointer.x;
       pointer.touchY = pointer.y;
+
       if (pressTimer) window.clearTimeout(pressTimer);
+
       if (!pointer.active) return;
+
       if (event.cancelable) event.preventDefault();
+
       if (paper.setPointerCapture && event.pointerId !== undefined) {
         try { paper.setPointerCapture(event.pointerId); } catch (error) {}
       }
+
       markInteractionPriority(1100);
+
       pointer.downStrength = clamp(pointer.downStrength + .30, 0, 1);
       pointer.heat = clamp(pointer.heat + .18, 0, 1);
+
       pointer.immediateTouch = true;
       debugState.immediateTouchFeedback = true;
+
       debugLog("immediate touch feedback");
+
       showInteractiveObject(pointer.x, pointer.y);
+
     }, { passive: false });
 
     function finishPointer(event) {
