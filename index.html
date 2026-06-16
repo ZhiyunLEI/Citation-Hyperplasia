@@ -1469,6 +1469,12 @@ th {
   let sceneBuilt = false;
 
   function boot() {
+    
+  requestAnimationFrame(() => {
+    resize();
+    buildScene();
+    drawFrame(performance.now());
+  });
     const isMobile = false;
 
     const map = {
@@ -2655,28 +2661,34 @@ th {
       publishStats();
     }
 
-    function resize() {
-      dpr = Math.min(window.devicePixelRatio || 1, canvasDprCap);
-      width = paper.clientWidth;
-      height = Math.max(paper.scrollHeight, paper.clientHeight);
-      canvas.style.height = height + "px";
-      canvas.width = Math.round(width * dpr);
-      canvas.height = Math.round(height * dpr);
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      interactionCanvas.style.height = height + "px";
-      interactionCanvas.width = Math.round(width * dpr);
-      interactionCanvas.height = Math.round(height * dpr);
-      interactionCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      interactionCtx.clearRect(0, 0, width, height);
-      updateViewBounds();
-      buildScene();
-      prepareInfectionGradient();
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, canvasDprCap);
 
-      document.documentElement.style.setProperty(
-        '--scale',
-        Math.min(window.innerWidth / 990, 1)
-      );
-    }
+    width = paper.clientWidth;
+    height = Math.max(paper.scrollHeight, paper.clientHeight);
+
+    canvas.style.height = height + "px";
+    canvas.width = Math.round(width * dpr);
+    canvas.height = Math.round(height * dpr);
+
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    interactionCanvas.style.height = height + "px";
+    interactionCanvas.width = Math.round(width * dpr);
+    interactionCanvas.height = Math.round(height * dpr);
+
+    interactionCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    interactionCtx.clearRect(0, 0, width, height);
+
+    updateViewBounds();
+
+    prepareInfectionGradient();
+
+    document.documentElement.style.setProperty(
+      '--scale',
+      Math.min(window.innerWidth / 990, 1)
+    );
+  }
 
     function drawTextParticle(particle, time, breath, heat) {
       const startupEase = getStartupEase(time);
