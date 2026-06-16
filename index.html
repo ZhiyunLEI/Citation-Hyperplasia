@@ -1466,7 +1466,30 @@ th {
     }
   }
 
+  let sceneBuilt = false;
+
   function boot() {
+    const isMobile = false;
+
+    const map = {
+      "lesion-core": "lesion_core_main",
+      "lesion-depth": "lesion_depth_shadow",
+      "lesion-tendrils": "lesion_tendrils",
+      "lesion-debris": "lesion_edge_debris",
+      "lesion-dust": "lesion_micro_citation_dust",
+      "lesion-membrane": "lesion_membrane_overlay"
+    };
+
+    Object.keys(map).forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      el.src = isMobile
+        ? `assets/lesions-opt-low/${map[id]}.jpg`
+        : `assets/lesions-opt/${map[id]}.webp`;
+    });
+
+
     document.documentElement.style.setProperty(
       '--scale',
       Math.min(window.innerWidth / 990, 1)
