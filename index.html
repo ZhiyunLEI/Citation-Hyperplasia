@@ -2049,7 +2049,7 @@ th {
         holes: []
       };
 
-      const localRng = mulberry32(seed + Math.round(width + height));
+      const localRng = mulberry32(seed);
       const holeCount = 16;
       for (let i = 0; i < holeCount; i++) {
         const angle = localRng() * Math.PI * 2;
@@ -2072,7 +2072,7 @@ th {
       const MAX_NUCLEI = 800;
 
       nuclei = [];
-      const count = Math.round(clamp(width * height / 6700, 205, 335));
+      const count = 280;
       let guard = 0;
       while (nuclei.length < count && guard < count * 7) {
         guard++;
@@ -2140,7 +2140,7 @@ th {
 
       upperBridgeParticles = [];
       const bridgeGlyphs = ["[", "]", "(", ")", ".", ":", "0", "1", "7", "2026", "DOI", "doi", "et", "al.", "et al.", "pp.", "Q1", "SSCI", "h-index"];
-      const bridgeCount = Math.round(clamp(width * height / 36000, 54, 88));
+      const bridgeCount = 72;
       for (let i = 0; i < bridgeCount; i++) {
         const t = localRng();
         const side = (localRng() - .5) * body.rx * (.74 + t * .62);
@@ -2168,7 +2168,7 @@ th {
 
       clots = [];
       const clotGlyphs = ["0", "8", "()", "[]", "{}", "[1]", "[3]", "[12]", "DOI", "doi", "et al.", "pp.", "Q1", "SSCI", "::", "//", "00", "01", "10", "11", ";", ".."];
-      const clotCount = Math.round(clamp(width * height / 56000, 15, 28));
+      const clotCount = 22;
       for (let i = 0; i < clotCount; i++) {
         const angle = localRng() * Math.PI * 2;
         const radius = Math.pow(localRng(), .58);
