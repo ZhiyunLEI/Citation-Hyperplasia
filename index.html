@@ -2664,8 +2664,8 @@ th {
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, canvasDprCap);
 
-    width = paper.clientWidth;
-    height = Math.max(paper.scrollHeight, paper.clientHeight);
+    height = 2380;
+    width = 990;
 
     canvas.style.height = height + "px";
     canvas.width = Math.round(width * dpr);
@@ -3915,8 +3915,15 @@ th {
       }, 180);
     }, { passive: true });
 
-    const resizeObserver = new ResizeObserver(resize);
+    const resizeObserver = new ResizeObserver(() => {
+      resize();
+      if (!window.__sceneReady) {
+        buildScene();
+        window.__sceneReady = true;
+      }
+    });
     resizeObserver.observe(paper);
+
     buildReferenceMildew();
     resize();
     requestAnimationFrame(drawFrame);
