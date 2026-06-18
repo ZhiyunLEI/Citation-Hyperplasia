@@ -1031,15 +1031,15 @@ th {
 <canvas class="lesion-canvas" id="lesionCanvas" aria-hidden="true"></canvas>
 <canvas class="interaction-canvas" id="interactionCanvas" aria-hidden="true"></canvas>
 <div class="interactive-object" id="interactiveObject" aria-hidden="true">
-  <img class="interactive-object-img" id="interactiveObjectImg" src="assets/lesions-opt/lesion_interactive_objects.webp" alt="">
+  <img class="interactive-object-img" id="interactiveObjectImg" data-lesion-asset="lesion_interactive_objects.webp" src="assets/lesions-mobile/lesion_interactive_objects.webp" alt="">
 </div>
 <div class="lesion-organism" aria-hidden="true">
-  <img class="lesion-layer lesion-depth" src="assets/lesions-opt/lesion_depth_shadow.webp" alt="">
-  <img class="lesion-layer lesion-tendrils" src="assets/lesions-opt/lesion_tendrils.webp" alt="">
-  <img class="lesion-layer lesion-debris" src="assets/lesions-opt/lesion_edge_debris.webp" alt="">
-  <img class="lesion-layer lesion-dust" src="assets/lesions-opt/lesion_micro_citation_dust.webp" alt="">
-  <img class="lesion-layer lesion-core" src="assets/lesions-opt/lesion_core_main.webp" alt="">
-  <img class="lesion-layer lesion-membrane" src="assets/lesions-opt/lesion_membrane_overlay.webp" alt="">
+  <img class="lesion-layer lesion-depth" data-lesion-asset="lesion_depth_shadow.webp" src="assets/lesions-mobile/lesion_depth_shadow.webp" alt="">
+  <img class="lesion-layer lesion-tendrils" data-lesion-asset="lesion_tendrils.webp" src="assets/lesions-mobile/lesion_tendrils.webp" alt="">
+  <img class="lesion-layer lesion-debris" data-lesion-asset="lesion_edge_debris.webp" src="assets/lesions-mobile/lesion_edge_debris.webp" alt="">
+  <img class="lesion-layer lesion-dust" data-lesion-asset="lesion_micro_citation_dust.webp" src="assets/lesions-mobile/lesion_micro_citation_dust.webp" alt="">
+  <img class="lesion-layer lesion-core" data-lesion-asset="lesion_core_main.webp" src="assets/lesions-mobile/lesion_core_main.webp" alt="">
+  <img class="lesion-layer lesion-membrane" data-lesion-asset="lesion_membrane_overlay.webp" src="assets/lesions-mobile/lesion_membrane_overlay.webp" alt="">
 </div>
 <div class="interaction-stress" aria-hidden="true"></div>
 
@@ -1484,6 +1484,15 @@ th {
     let animatedDomSpanCount = 0;
     const urlParams = new URLSearchParams(window.location.search);
     const debugMode = urlParams.has("debug");
+    const lesionAssetNames = [
+      "lesion_depth_shadow.webp",
+      "lesion_tendrils.webp",
+      "lesion_edge_debris.webp",
+      "lesion_micro_citation_dust.webp",
+      "lesion_core_main.webp",
+      "lesion_membrane_overlay.webp",
+      "lesion_interactive_objects.webp"
+    ];
     const debugState = {
       pointerdownDetected: false,
       immediateTouchFeedback: false,
@@ -1505,6 +1514,30 @@ th {
       perfHud.className = "perf-hud";
       perfHud.textContent = "FPS --";
       document.body.appendChild(perfHud);
+    }
+
+    function shouldUseMobileAssets() {
+      if (urlParams.has("hires")) return false;
+      if (urlParams.has("mobile")) return true;
+      const coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
+      const narrowScreen = Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 900;
+      const touchDevice = navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
+      return coarsePointer || touchDevice || narrowScreen;
+    }
+
+    function lesionAssetBase() {
+      return shouldUseMobileAssets() ? "assets/lesions-mobile" : "assets/lesions-opt";
+    }
+
+    function applyLesionAssetProfile() {
+      const base = lesionAssetBase();
+      document.querySelectorAll("[data-lesion-asset]").forEach((img) => {
+        const name = img.getAttribute("data-lesion-asset");
+        if (!name) return;
+        const src = `${base}/${name}`;
+        if (img.getAttribute("src") !== src) img.setAttribute("src", src);
+      });
+      return base;
     }
 
     function debugPointerSnapshot() {
@@ -1603,15 +1636,8 @@ th {
     }
 
     function preloadAndDecodeAssets() {
-      const sources = new Set([
-        "assets/lesions-opt/lesion_depth_shadow.webp",
-        "assets/lesions-opt/lesion_tendrils.webp",
-        "assets/lesions-opt/lesion_edge_debris.webp",
-        "assets/lesions-opt/lesion_micro_citation_dust.webp",
-        "assets/lesions-opt/lesion_core_main.webp",
-        "assets/lesions-opt/lesion_membrane_overlay.webp",
-        "assets/lesions-opt/lesion_interactive_objects.webp"
-      ]);
+      const base = applyLesionAssetProfile();
+      const sources = new Set(lesionAssetNames.map((name) => `${base}/${name}`));
       document.querySelectorAll("img").forEach((img) => {
         const src = img.currentSrc || img.src || img.getAttribute("src");
         if (src) sources.add(src);
@@ -1647,7 +1673,8 @@ th {
     async function runExhibitionWarmup() {
       try {
         registerExhibitionCache();
-        const timeout = new Promise((resolve) => window.setTimeout(resolve, 4200));
+        const timeoutMs = shouldUseMobileAssets() ? 2200 : 4200;
+        const timeout = new Promise((resolve) => window.setTimeout(resolve, timeoutMs));
         const work = (async () => {
           await preloadAndDecodeAssets();
           await new Promise((resolve) => requestAnimationFrame(resolve));
