@@ -4,9 +4,13 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Citation Hyperplasia — Performance Preview</title>
+<link rel="manifest" href="manifest.webmanifest">
 <style>
 :root {
   --paper-width: 990px;
+  --art-width: 990px;
+  --art-height: 2380px;
+  --stage-scale: 1;
   --paper-bg: #fbfaf6;
   --screen-bg: #d1d1d1;
   --ink: #111111;
@@ -33,6 +37,16 @@ body {
 
 .stage {
   padding: 42px 0 88px;
+  opacity: 1;
+  transition: opacity 620ms ease;
+  width: var(--art-width);
+  margin: 0 auto;
+  transform-origin: top center;
+  zoom: var(--stage-scale);
+}
+
+body.is-warming .stage {
+  opacity: 0;
 }
 
 .paper {
@@ -235,12 +249,12 @@ body {
   width: 54%;
   left: 43.8%;
   top: 5.5%;
-  opacity: calc(0.70 - var(--organ-reflex, 0) * 0.4);
+  opacity: .70;
   filter: contrast(.84) saturate(.50) brightness(1.35);
   mix-blend-mode: multiply;
   animation: lesion-membrane-breathe 37s cubic-bezier(.43, 0, .30, 1) infinite;
   animation-delay: -9.6s;
-  scale: calc(1 - var(--organ-reflex, 0) * 0.05);
+  scale: calc(1 + var(--organ-reflex, 0) * .0036);
 }
 
 .lesion-tendrils {
@@ -994,11 +1008,6 @@ th {
   }
 }
 
-.paper {
-  width: 990px;
-  height: auto;
-}
-
 @media print {
   body {
     background: #ffffff;
@@ -1016,7 +1025,7 @@ th {
 }
 </style>
 </head>
-<body>
+<body class="is-warming">
 <div class="stage">
 <main class="paper">
 <canvas class="lesion-canvas" id="lesionCanvas" aria-hidden="true"></canvas>
@@ -1302,15 +1311,11 @@ th {
       const tangent = rng() > .5 ? 1 : -1;
       const swirlX = -pullVector.y * tangent;
       const swirlY = pullVector.x * tangent;
-
       const dx = pullVector.x * reach * directed * .74 + swirlX * reach * directed * .22 + (rng() - .5) * reach * (1 - directed * .42);
       const dy = pullVector.y * reach * directed * .74 + swirlY * reach * directed * .22 + (rng() - .5) * reach * (1.00 + severity * .38) * (1 - directed * .36);
-
       const directionalRot = Math.atan2(pullVector.y, pullVector.x) * 24;
-
       const rot = directionalRot * directed + (rng() - .5) * (14 + severity * (options.chaotic ? 185 : 128));
       const scale = 1 + rng() * (.09 + severity * (options.chaotic ? .70 : .48));
-      
       const colorRoll = rng();
       const color =
         colorRoll > .982 ? "rgba(18,104,115,.92)" :
@@ -1383,124 +1388,7 @@ th {
     };
   }
 
-  class Engine {
-    constructor() {
-      this.systems = {};
-      this.lastTime = 0;
-      this.running = false;
-      this.fps = 60;
-
-      this.performance = {
-        intensity: 1,   // 1 = full, 0.4 = low
-        adaptive: true
-      };
-    }
-
-    register(name, system) {
-      this.systems[name] = system;
-    }
-
-    start() {
-      this.running = true;
-      this.lastTime = performance.now();
-      requestAnimationFrame(this.loop.bind(this));
-    }
-
-    loop(t) {
-      if (!this.running) return;
-
-      const delta = t - this.lastTime;
-      this.lastTime = t;
-
-      // 🔥 自动性能检测（核心）
-      this.updatePerformance(delta);
-
-      // 🧠 统一调度所有系统
-      for (const key in this.systems) {
-        const sys = this.systems[key];
-        if (sys && sys.update) {
-          sys.update(delta, this.performance);
-        }
-      }
-
-      requestAnimationFrame(this.loop.bind(this));
-    }
-
-    updatePerformance(delta) {
-      // 简单 FPS 估算
-      const currentFps = 1000 / delta;
-
-      // 平滑处理
-      this.fps = this.fps * 0.9 + currentFps * 0.1;
-
-      if (!this.performance.adaptive) return;
-
-      // 🔻 性能降级逻辑（你已允许）
-      if (this.fps < 30) {
-        this.performance.intensity = 0.55;
-      } else if (this.fps < 45) {
-        this.performance.intensity = 0.75;
-      } else {
-        this.performance.intensity = 1;
-      }
-    }
-  }
-
-  class BioFrameClock {
-    constructor() {
-      this.frame = 0;
-      this.lockChance = 0.35; // 越高越“卡帧”
-      this.jitterChance = 0.22; // 突变概率
-    }
-
-    tick() {
-      this.frame++;
-
-      // 🧠 是否“冻结这一帧”
-      const locked = Math.random() < this.lockChance;
-
-      return {
-        frame: this.frame,
-        locked
-      };
-    }
-  }
-
-  let sceneBuilt = false;
-
   function boot() {
-    
-  requestAnimationFrame(() => {
-    resize();
-    buildScene();
-    drawFrame(performance.now());
-  });
-    const isMobile = false;
-
-    const map = {
-      "lesion-core": "lesion_core_main",
-      "lesion-depth": "lesion_depth_shadow",
-      "lesion-tendrils": "lesion_tendrils",
-      "lesion-debris": "lesion_edge_debris",
-      "lesion-dust": "lesion_micro_citation_dust",
-      "lesion-membrane": "lesion_membrane_overlay"
-    };
-
-    Object.keys(map).forEach(id => {
-      const el = document.getElementById(id);
-      if (!el) return;
-
-      el.src = isMobile
-        ? `assets/lesions-opt-low/${map[id]}.jpg`
-        : `assets/lesions-opt/${map[id]}.webp`;
-    });
-
-
-    document.documentElement.style.setProperty(
-      '--scale',
-      Math.min(window.innerWidth / 990, 1)
-    );
-    
     const paper = document.querySelector(".paper");
     const canvas = document.getElementById("lesionCanvas");
     const interactionCanvas = document.getElementById("interactionCanvas");
@@ -1520,9 +1408,6 @@ th {
 
     const ctx = canvas.getContext("2d", { alpha: true });
     const interactionCtx = interactionCanvas.getContext("2d", { alpha: true });
-
-    let organPulse = 0;
-
     let width = 0;
     let height = 0;
     let dpr = 1;
@@ -1577,13 +1462,19 @@ th {
       nextSeepAt: 0,
       seepBursts: 0
     };
+    const ART_WIDTH = 990;
+    const ART_HEIGHT = 2380;
+    const FIXED_VISUAL_FRAME_MS = 50;
+    let displayScale = 1;
+    let visualTime = 0;
     let last = 0;
     let currentBreath = { breath: 0, organ: 0, membrane: 0, ingest: 0, digest: 0, expel: 0, rest: 0, phase: 0 };
     let upperPlumeDensity = .52;
     let organReflex = 0;
-    let animationStartedAt = performance.now();
+    let organTouchPulse = 0;
+    let animationStartedAt = 0;
     const canvasDprCap = 1;
-    const idleFrameMs = 66;
+    const idleFrameMs = 50;
     const interactionFrameMs = 50;
     const instantFrameMs = 33;
     let drawFpsLast = 0;
@@ -1655,13 +1546,15 @@ th {
 
     function updateViewBounds() {
       const rect = paper.getBoundingClientRect();
-      const bufferY = Math.max(220, window.innerHeight * .42);
-      const bufferX = Math.max(140, window.innerWidth * .22);
+      displayScale = rect.width ? rect.width / Math.max(1, width || ART_WIDTH) : displayScale;
+      const scale = Math.max(.1, displayScale || 1);
+      const bufferY = Math.max(220, window.innerHeight * .42 / scale);
+      const bufferX = Math.max(140, window.innerWidth * .22 / scale);
       viewBounds = {
-        left: -rect.left - bufferX,
-        right: -rect.left + window.innerWidth + bufferX,
-        top: -rect.top - bufferY,
-        bottom: -rect.top + window.innerHeight + bufferY
+        left: -rect.left / scale - bufferX,
+        right: (-rect.left + window.innerWidth) / scale + bufferX,
+        top: -rect.top / scale - bufferY,
+        bottom: (-rect.top + window.innerHeight) / scale + bufferY
       };
     }
 
@@ -1682,6 +1575,90 @@ th {
 
     function markInteractionPriority(duration = 950) {
       interactionPriorityUntil = Math.max(interactionPriorityUntil, performance.now() + duration);
+    }
+
+    function revealStage() {
+      document.body.classList.remove("is-warming");
+      document.body.classList.add("is-ready");
+    }
+
+    function decodeImage(src) {
+      return new Promise((resolve) => {
+        if (!src) {
+          resolve();
+          return;
+        }
+        const img = new Image();
+        img.decoding = "async";
+        img.onload = () => {
+          if (img.decode) {
+            img.decode().then(resolve).catch(resolve);
+          } else {
+            resolve();
+          }
+        };
+        img.onerror = resolve;
+        img.src = src;
+      });
+    }
+
+    function preloadAndDecodeAssets() {
+      const sources = new Set([
+        "assets/lesions-opt/lesion_depth_shadow.webp",
+        "assets/lesions-opt/lesion_tendrils.webp",
+        "assets/lesions-opt/lesion_edge_debris.webp",
+        "assets/lesions-opt/lesion_micro_citation_dust.webp",
+        "assets/lesions-opt/lesion_core_main.webp",
+        "assets/lesions-opt/lesion_membrane_overlay.webp",
+        "assets/lesions-opt/lesion_interactive_objects.webp"
+      ]);
+      document.querySelectorAll("img").forEach((img) => {
+        const src = img.currentSrc || img.src || img.getAttribute("src");
+        if (src) sources.add(src);
+      });
+      return Promise.all(Array.from(sources).map((src) => decodeImage(src)));
+    }
+
+    function warmUpCanvasCompositor() {
+      ctx.save();
+      ctx.globalAlpha = .002;
+      ctx.fillStyle = "rgba(18,14,12,.18)";
+      for (let i = 0; i < 36; i++) {
+        ctx.beginPath();
+        ctx.arc(body ? body.x + Math.cos(i) * body.rx * .28 : 80 + i, body ? body.y + Math.sin(i * 1.7) * body.ry * .18 : 80, .6 + (i % 4) * .18, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+      interactionCtx.save();
+      interactionCtx.globalAlpha = .002;
+      interactionCtx.fillStyle = "rgba(30,24,20,.20)";
+      interactionCtx.fillRect(width * .52, height * .62, 3, 3);
+      interactionCtx.restore();
+      ctx.clearRect(0, 0, width, height);
+      interactionCtx.clearRect(0, 0, width, height);
+    }
+
+    function registerExhibitionCache() {
+      if (!("serviceWorker" in navigator)) return;
+      if (location.protocol === "file:") return;
+      navigator.serviceWorker.register("service-worker.js").catch(() => {});
+    }
+
+    async function runExhibitionWarmup() {
+      try {
+        registerExhibitionCache();
+        const timeout = new Promise((resolve) => window.setTimeout(resolve, 4200));
+        const work = (async () => {
+          await preloadAndDecodeAssets();
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          warmUpCanvasCompositor();
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+          await new Promise((resolve) => requestAnimationFrame(resolve));
+        })();
+        await Promise.race([work, timeout]);
+      } finally {
+        revealStage();
+      }
     }
 
     function showInteractiveObject(x, y) {
@@ -1822,6 +1799,18 @@ th {
       pointer.pressHeat = clamp(pointer.pressHeat + .025 + near * .045, 0, 1);
       pointer.wetHeat = clamp(pointer.wetHeat + .08 + near * .12, 0, 1);
       organReflex = clamp(organReflex + .035 + near * .08, 0, 1);
+    }
+
+    function triggerOrganTouchPulse(x, y) {
+      if (!body) return;
+      const dx = (x - body.x) / (body.rx * 1.82);
+      const dy = (y - body.y) / (body.ry * 1.88);
+      const near = clamp(1 - (dx * dx + dy * dy), 0, 1);
+      if (near <= .035) return;
+      organTouchPulse = clamp(organTouchPulse + .20 + near * .30, 0, 1);
+      organReflex = clamp(organReflex + .010 + near * .020, 0, 1);
+      pointer.wetHeat = clamp(pointer.wetHeat + .035 + near * .055, 0, 1);
+      pointer.pressHeat = clamp(pointer.pressHeat + .018 + near * .035, 0, 1);
     }
 
     function clearStressClasses() {
@@ -2078,7 +2067,7 @@ th {
         holes: []
       };
 
-      const localRng = mulberry32(seed);
+      const localRng = mulberry32(seed + Math.round(width + height));
       const holeCount = 16;
       for (let i = 0; i < holeCount; i++) {
         const angle = localRng() * Math.PI * 2;
@@ -2095,13 +2084,8 @@ th {
       }
       markDigestiveHoles();
 
-      let __drawBudget = 0;
-      const MAX_DRAW_BUDGET = 140;
-
-      const MAX_NUCLEI = 800;
-
       nuclei = [];
-      const count = 280;
+      const count = Math.round(clamp(width * height / 6700, 205, 335));
       let guard = 0;
       while (nuclei.length < count && guard < count * 7) {
         guard++;
@@ -2160,16 +2144,11 @@ th {
           plumePeak: upperFungalZone || midSprayColumn || topJetTip,
           spread: (upperFungalZone ? 1.55 : .8) + localRng() * (upperFungalZone ? 3.7 : 2.8)
         });
-
-          if (nuclei.length > MAX_NUCLEI) {
-            nuclei.splice(0, nuclei.length - MAX_NUCLEI);
-          }
-
       }
 
       upperBridgeParticles = [];
       const bridgeGlyphs = ["[", "]", "(", ")", ".", ":", "0", "1", "7", "2026", "DOI", "doi", "et", "al.", "et al.", "pp.", "Q1", "SSCI", "h-index"];
-      const bridgeCount = 72;
+      const bridgeCount = Math.round(clamp(width * height / 36000, 54, 88));
       for (let i = 0; i < bridgeCount; i++) {
         const t = localRng();
         const side = (localRng() - .5) * body.rx * (.74 + t * .62);
@@ -2197,7 +2176,7 @@ th {
 
       clots = [];
       const clotGlyphs = ["0", "8", "()", "[]", "{}", "[1]", "[3]", "[12]", "DOI", "doi", "et al.", "pp.", "Q1", "SSCI", "::", "//", "00", "01", "10", "11", ";", ".."];
-      const clotCount = 22;
+      const clotCount = Math.round(clamp(width * height / 56000, 15, 28));
       for (let i = 0; i < clotCount; i++) {
         const angle = localRng() * Math.PI * 2;
         const radius = Math.pow(localRng(), .58);
@@ -2240,9 +2219,6 @@ th {
         });
       }
 
-
-      const MAX_RESIDUES = 1200;
-
       residues = [];
       for (let i = 0; i < 190; i++) {
         const angle = localRng() * Math.PI * 2;
@@ -2260,11 +2236,6 @@ th {
           color: localRng() > .94 ? pick(localRng, palette.slice(3)) : "rgba(72,64,51,.17)",
           amp: localRng() * 1.2
         });
-
-          if (residues.length > MAX_RESIDUES) {
-            residues.splice(0, residues.length - MAX_RESIDUES);
-          }
-
       }
 
       edgeCrumbs = [];
@@ -2661,34 +2632,29 @@ th {
       publishStats();
     }
 
-  function resize() {
-    dpr = Math.min(window.devicePixelRatio || 1, canvasDprCap);
-
-    height = 2380;
-    width = 990;
-
-    canvas.style.height = height + "px";
-    canvas.width = Math.round(width * dpr);
-    canvas.height = Math.round(height * dpr);
-
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-
-    interactionCanvas.style.height = height + "px";
-    interactionCanvas.width = Math.round(width * dpr);
-    interactionCanvas.height = Math.round(height * dpr);
-
-    interactionCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    interactionCtx.clearRect(0, 0, width, height);
-
-    updateViewBounds();
-
-    prepareInfectionGradient();
-
-    document.documentElement.style.setProperty(
-      '--scale',
-      Math.min(window.innerWidth / 990, 1)
-    );
-  }
+    function resize() {
+      dpr = Math.min(window.devicePixelRatio || 1, canvasDprCap);
+      width = ART_WIDTH;
+      height = ART_HEIGHT;
+      const screenGutter = 20;
+      const availableWidth = Math.max(320, window.innerWidth - screenGutter);
+      displayScale = Math.min(1, availableWidth / ART_WIDTH);
+      document.documentElement.style.setProperty("--stage-scale", displayScale.toFixed(4));
+      canvas.style.height = height + "px";
+      canvas.style.width = width + "px";
+      canvas.width = Math.round(width * dpr);
+      canvas.height = Math.round(height * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      interactionCanvas.style.height = height + "px";
+      interactionCanvas.style.width = width + "px";
+      interactionCanvas.width = Math.round(width * dpr);
+      interactionCanvas.height = Math.round(height * dpr);
+      interactionCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      interactionCtx.clearRect(0, 0, width, height);
+      updateViewBounds();
+      buildScene();
+      prepareInfectionGradient();
+    }
 
     function drawTextParticle(particle, time, breath, heat) {
       const startupEase = getStartupEase(time);
@@ -2734,69 +2700,37 @@ th {
       ctx.restore();
     }
 
-  function drawClotMass(time, breath, heat) {
-    const startupEase = getStartupEase(time);
-
-    const organScale = 1 + organPulse * 0.12;
-    const organRotate = organPulse * 0.08;
-
-    ctx.save();
-    ctx.translate(body.x, body.y);
-    ctx.scale(organScale, organScale);
-    ctx.rotate(organRotate);
-    ctx.translate(-body.x, -body.y);
-
-    for (const clot of clots) {
-      if (!isPointVisible(clot.x, clot.y, 140)) continue;
-
-      const local = time * (.000032 + startupEase * .000050) + clot.phase;
-      const corePulse = Math.pow(clot.core, 2.1);
-      const organ = currentBreath.organ;
-      const motionGate = .13 + startupEase * .49;
-      const swell =
-        .975 +
-        organ * .064 * corePulse +
-        breath * .034 * corePulse +
-        Math.sin(local * .76) * .007 * corePulse +
-        heat * .012 * corePulse;
-
-      const x =
-        clot.x +
-        Math.cos(local * .72) * clot.amp * (.016 + organ * .046 * corePulse) * motionGate;
-
-      const y =
-        clot.y +
-        Math.sin(local * .62) * clot.amp * (.016 + organ * .052 * corePulse) * motionGate;
-
-      ctx.save();
-      ctx.translate(x, y);
-      ctx.rotate(clot.rot + Math.sin(local * .48) * .014 * corePulse * motionGate);
-
+    function drawClotMass(time, breath, heat) {
+      const startupEase = getStartupEase(time);
+      for (const clot of clots) {
+        if (!isPointVisible(clot.x, clot.y, 140)) continue;
+        const local = time * (.000032 + startupEase * .000050) + clot.phase;
+        const corePulse = Math.pow(clot.core, 2.1);
+        const organ = currentBreath.organ;
+        const motionGate = .13 + startupEase * .49;
+        const swell = .975 + organ * .064 * corePulse + breath * .034 * corePulse + Math.sin(local * .76) * .007 * corePulse + heat * .012 * corePulse;
+        const x = clot.x + Math.cos(local * .72) * clot.amp * (.016 + organ * .046 * corePulse) * motionGate;
+        const y = clot.y + Math.sin(local * .62) * clot.amp * (.016 + organ * .052 * corePulse) * motionGate;
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(clot.rot + Math.sin(local * .48) * .014 * corePulse * motionGate);
       const form = clot.form || "clot";
-      ctx.scale(
-        swell * (form === "thread" ? 1.38 : form === "spore" ? .92 : 1),
-        swell * (form === "thread" ? .78 : form === "spore" ? 1.08 : 1)
-      );
-
-      const plumeScale = clot.plumePeak ? (.72 + upperPlumeDensity * .28) : 1;
-      ctx.globalAlpha = clamp(clot.alpha * .68 + breath * .038 * corePulse, .026, .20) * plumeScale;
-      ctx.fillStyle = clot.color;
-      ctx.shadowColor = "rgba(0,0,0,.16)";
-      ctx.shadowBlur = .7 + breath * 1.85 * corePulse + (form === "clot" ? .55 : 0);
-      ctx.font = `580 ${clot.size * .68}px "Times New Roman", Times, serif`;
-      ctx.fillText(clot.char, 0, 0);
-
-      if (form === "clot") {
-        ctx.globalAlpha *= .40;
-        ctx.fillText(clot.char.length > 1 ? "." : clot.char, -(clot.spread || 1) * .45, (clot.spread || 1) * .35);
-        ctx.fillText(".", (clot.spread || 1) * .55, -(clot.spread || 1) * .25);
+      ctx.scale(swell * (form === "thread" ? 1.38 : form === "spore" ? .92 : 1), swell * (form === "thread" ? .78 : form === "spore" ? 1.08 : 1));
+        const plumeScale = clot.plumePeak ? (.72 + upperPlumeDensity * .28) : 1;
+        ctx.globalAlpha = clamp(clot.alpha * .68 + breath * .038 * corePulse, .026, .20) * plumeScale;
+        ctx.fillStyle = clot.color;
+        ctx.shadowColor = "rgba(0,0,0,.16)";
+        ctx.shadowBlur = .7 + breath * 1.85 * corePulse + (form === "clot" ? .55 : 0);
+        ctx.font = `580 ${clot.size * .68}px "Times New Roman", Times, serif`;
+        ctx.fillText(clot.char, 0, 0);
+        if (form === "clot") {
+          ctx.globalAlpha *= .40;
+          ctx.fillText(clot.char.length > 1 ? "." : clot.char, -(clot.spread || 1) * .45, (clot.spread || 1) * .35);
+          ctx.fillText(".", (clot.spread || 1) * .55, -(clot.spread || 1) * .25);
+        }
+        ctx.restore();
       }
-
-      ctx.restore();
     }
-
-    ctx.restore();
-  }
 
     function drawUpperBridgeParticles(time, breath) {
       const density = upperPlumeDensity;
@@ -3485,7 +3419,7 @@ th {
         const touchDx = (hole.x - (pointer.touchX || body.x)) / (body.rx * .36);
         const touchDy = (hole.y - (pointer.touchY || body.y)) / (body.ry * .30);
         const touchLocality = clamp(1 - touchDx * touchDx - touchDy * touchDy, 0, 1);
-        const touchDark = touchLocality * (pointer.pressHeat * .42 + pointer.tapHeat * .18 + pointer.longSignalHeat * .16);
+        const touchDark = touchLocality * (pointer.pressHeat * .42 + pointer.tapHeat * .18 + pointer.longSignalHeat * .16 + organTouchPulse * .22);
         const metabolicDark = primary * (currentBreath.digest * .52 + currentBreath.ingest * .10 + currentBreath.organ * .10 + currentBreath.expel * .06) + keyBreath * .10 + keyHole * openingLife * .11;
         const count = Math.round(12 + (hole.rx + hole.ry) * (.36 + primary * .10 + keyHole * .035));
         if (keyHole) {
@@ -3539,21 +3473,7 @@ th {
       }
     }
 
-    let __bgTick = 0;
-
-    const FRAME_BUDGET = {
-      tendrils: 1,
-      residues: 1,
-      nuclei: 2,
-      background: 2
-    };
-
-    
-    function drawFrame(time) {
-
-      organPulse *= 0.92;
-
-      __drawBudget = 0;
+    function drawFrame(realTime) {
       const interactionActive =
         pointer.downActive ||
         pointer.tapHeat > .035 ||
@@ -3561,57 +3481,26 @@ th {
         pointer.releaseHeat > .035 ||
         pointer.longSignalHeat > .040 ||
         interactionBursts.length > 0;
-
-      const interactionPriority = time < interactionPriorityUntil;
+      const interactionPriority = realTime < interactionPriorityUntil;
       const scrolling = scrollSettle > .34;
       const currentFrameMs = interactionActive ? interactionFrameMs : idleFrameMs;
-
       paper.classList.toggle("is-interacting", interactionActive);
       paper.classList.toggle("is-scrolling", scrolling);
-
-      if (time - last < currentFrameMs) {
+      if (realTime - last < currentFrameMs) {
         requestAnimationFrame(drawFrame);
         return;
       }
-
       if (last) {
-        drawFpsLast = 1000 / (time - last);
+        drawFpsLast = 1000 / (realTime - last);
         drawFpsSamples.push(drawFpsLast);
         if (drawFpsSamples.length > 240) drawFpsSamples.shift();
       }
-
       drawFrameCount++;
       frameToggle++;
-      __bgTick = (__bgTick + 1) % 10000;
-
-      last = time - ((time - last) % currentFrameMs);
-
-      const state = cf_updateFrameStateAndBuildState(
-        time,
-        interactionActive,
-        interactionPriority,
-        scrolling
-      );
-
-      ctx.clearRect(0, 0, width, height);
-      ctx.globalCompositeOperation = "source-over";
-
-      // L1: INTERACTION（最高优先级）
-      cf_runInteractionLayer(state);
-
-      // L2: BIOLOGICAL（母体 / 病灶）
-      cf_runBiologicalLayer(state);
-
-      // L3: BACKGROUND（背景粒子 / 语义流）
-      cf_runBackgroundLayer(state);
-
-      publishStats();
-      requestAnimationFrame(drawFrame);
-    }
-
-    function cf_updateFrameStateAndBuildState(time, interactionActive, interactionPriority, scrolling) {
+      last = realTime - ((realTime - last) % currentFrameMs);
+      visualTime += FIXED_VISUAL_FRAME_MS;
+      const time = visualTime;
       updateViewBounds();
-
       scrollSettle *= .86;
       pointer.tapHeat *= .88;
       pointer.pressHeat *= pointer.downActive ? .985 : .955;
@@ -3620,108 +3509,39 @@ th {
       pointer.downStrength *= pointer.downActive ? .985 : .930;
       pointer.releaseHeat *= .948;
       organReflex *= pointer.downActive ? .982 : .948;
-
       updateLongPressAbsorption(time);
-
       const activity = 1 - scrollSettle * .58;
       currentBreath = getBreathState(time, activity);
-
-      const upperPlumeTarget = clamp(
-        .40 +
-        currentBreath.ingest * .24 +
-        currentBreath.digest * .12 +
-        currentBreath.organ * .12 +
-        currentBreath.membrane * .08 -
-        scrollSettle * .20,
-        .32,
-        .82
-      );
+      const upperPlumeTarget = clamp(.40 + currentBreath.ingest * .24 + currentBreath.digest * .12 + currentBreath.organ * .12 + currentBreath.membrane * .08 - scrollSettle * .20, .32, .82);
       upperPlumeDensity += (upperPlumeTarget - upperPlumeDensity) * .08;
-
       const startupEase = getStartupEase(time);
       const startupLife = 1 - startupEase;
       const breath = currentBreath.breath;
-
       pointer.heat *= .94;
-      const heat =
-        (pointer.active ? Math.max(pointer.heat, .18) : pointer.heat) +
-        pointer.tapHeat * .18 +
-        pointer.pressHeat * .34;
-
+      organTouchPulse *= pointer.downActive ? .965 : .925;
+      const heat = (pointer.active ? Math.max(pointer.heat, .18) : pointer.heat) + pointer.tapHeat * .18 + pointer.pressHeat * .34;
       if (organism) {
         const openingLife = Math.pow(startupLife, 1.35);
-        organism.style.setProperty("--organ-reflex", organReflex.toFixed(3));
-        organism.style.setProperty(
-          "--touch-wet-a",
-          (pointer.wetHeat * .38 + currentBreath.membrane * .066 + openingLife * .072).toFixed(3)
-        );
-        organism.style.setProperty(
-          "--touch-wet-b",
-          (pointer.wetHeat * .28 + currentBreath.membrane * .050 + openingLife * .052).toFixed(3)
-        );
+        const touchReflex = Math.max(organReflex, organTouchPulse * .18);
+        organism.style.setProperty("--organ-reflex", touchReflex.toFixed(3));
+        organism.style.setProperty("--touch-wet-a", (pointer.wetHeat * .38 + currentBreath.membrane * .066 + openingLife * .072 + organTouchPulse * .030).toFixed(3));
+        organism.style.setProperty("--touch-wet-b", (pointer.wetHeat * .28 + currentBreath.membrane * .050 + openingLife * .052 + organTouchPulse * .022).toFixed(3));
       }
 
-      // 这里做一点更明确的“背景降负载”
-      const backgroundStrideBase = scrolling ? 4 : interactionPriority ? 4 : interactionActive ? 2 : 3;
-      const denseStrideBase = scrolling ? 5 : interactionPriority ? 4 : interactionActive ? 3 : 4;
+      ctx.clearRect(0, 0, width, height);
+      ctx.globalCompositeOperation = "source-over";
 
-      // 交互时 / 滚动时，背景层更保守一些
-      const backgroundStride = interactionActive ? backgroundStrideBase + 1 : backgroundStrideBase;
-      const denseStride = interactionActive ? denseStrideBase + 1 : denseStrideBase;
+      const backgroundStride = scrolling ? 4 : interactionPriority ? 4 : interactionActive ? 2 : 3;
+      const denseStride = scrolling ? 5 : interactionPriority ? 4 : interactionActive ? 3 : 4;
+      const drawBackground = interactionPriority
+        ? frameToggle % 2 === 0
+        : (!scrolling || interactionActive || frameToggle % 2 === 0);
 
-      const drawBackground =
-        interactionPriority
-          ? frameToggle % 2 === 0
-          : (!scrolling || interactionActive || frameToggle % 2 === 0);
-
-      return {
-        time,
-        interactionActive,
-        interactionPriority,
-        scrolling,
-        startupEase,
-        startupLife,
-        breath,
-        heat,
-        drawBackground,
-        backgroundStride,
-        denseStride
-      };
-    }
-
-    function cf_runInteractionLayer(state) {
-      // 交互优先，不做大循环，只做最直接反馈
-      drawTouchResponse(state.time);
-      drawInteractionBursts(state.time, state.breath);
-    }
-
-    function cf_runBiologicalLayer(state) {
-      // 母体相关：保持稳定生命感
-      drawClotMass(state.time, state.breath, state.heat);
-      drawHoleEdges(state.time, state.breath);
-    }
-
-    function cf_runBackgroundLayer(state) {
-      const time = state.time;
-      const breath = state.breath;
-      const heat = state.heat;
-      const scrolling = state.scrolling;
-      const interactionPriority = state.interactionPriority;
-      const interactionActive = state.interactionActive;
-      const backgroundStride = state.backgroundStride;
-      const denseStride = state.denseStride;
-      const drawBackground = state.drawBackground;
-      const startupEase = state.startupEase;
-
-      // ------- 背景主结构 -------
       for (let i = frameToggle % backgroundStride; i < tendrils.length; i += backgroundStride) {
         const tendril = tendrils[i];
         drawTendril(tendril, time, breath, heat);
-        if (interactionActive || frameToggle % 2 === 0) {
-          drawPulledFragments(tendril, time, breath);
-        }
+        if (interactionActive || frameToggle % 2 === 0) drawPulledFragments(tendril, time, breath);
       }
-
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawSwallowStreams(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawAbsorbedFragments(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawUpperBridgeParticles(time, breath);
@@ -3733,20 +3553,14 @@ th {
       drawExpelledWaste(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawLowerRightResidue(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawLifeMotes(time, breath);
+      drawClotMass(time, breath, heat);
 
-      // ------- 文字性粒子层 -------
-      const stride = interactionActive ? 3 : 5;
-
-      for (let i = frameToggle % stride; i < residues.length; i += stride)
-      
-      {
+      for (let i = frameToggle % denseStride; i < residues.length; i += denseStride) {
         const particle = residues[i];
         if (!isPointVisible(particle.x, particle.y, 110)) continue;
-
         const local = time * (.000025 + startupEase * .000036) + particle.phase;
         const motionGate = .16 + startupEase * .40;
         const syncBreath = breath * .38 + currentBreath.organ * .62;
-
         ctx.save();
         ctx.translate(
           particle.x + Math.cos(local) * particle.amp * .022 * motionGate,
@@ -3760,24 +3574,24 @@ th {
         ctx.restore();
       }
 
-      const textSkip = isMobile ? 2 : 1;
-
-      for (let i = frameToggle % textSkip; i < nuclei.length; i += textSkip)
-      
-      {
+      for (let i = frameToggle % denseStride; i < nuclei.length; i += denseStride) {
         if (!isPointVisible(nuclei[i].x, nuclei[i].y, 120)) continue;
         drawTextParticle(nuclei[i], time, breath, heat);
       }
-    }
+      drawHoleEdges(time, breath);
+      drawTouchResponse(time);
+      drawInteractionBursts(time, breath);
+      publishStats();
 
-    function triggerOrganPulse() {
-      organPulse = 1;
+      requestAnimationFrame(drawFrame);
     }
 
     function updatePointerFromEvent(event) {
       const rect = paper.getBoundingClientRect();
-      pointer.x = event.clientX - rect.left;
-      pointer.y = event.clientY - rect.top;
+      const scale = rect.width ? rect.width / Math.max(1, width || ART_WIDTH) : (displayScale || 1);
+      displayScale = scale || displayScale;
+      pointer.x = (event.clientX - rect.left) / Math.max(.1, scale);
+      pointer.y = (event.clientY - rect.top) / Math.max(.1, scale);
       if (body) {
         const dx = (pointer.x - body.x) / (body.rx * 1.95);
         const dy = (pointer.y - body.y) / (body.ry * 2.05);
@@ -3797,58 +3611,33 @@ th {
     }, { passive: true });
 
     paper.addEventListener("pointerdown", (event) => {
-
-      // 1. 先更新位置（关键）
       updatePointerFromEvent(event);
-
-      // 2. 再判断是否在母体
-      if (pointer.active) {
-        triggerOrganPulse();
-      }
-
-      // 3. 再处理状态系统
       debugState.pointerdownDetected = true;
       debugState.pointerdownCount += 1;
-
-      debugLog("pointerdown", {
-        pointerId: event.pointerId,
-        pointerType: event.pointerType || "unknown",
-        active: pointer.active
-      });
-
+      debugLog("pointerdown", { pointerId: event.pointerId, pointerType: event.pointerType || "unknown", active: pointer.active });
       pointer.down = pointer.active;
       pointer.downActive = pointer.active;
       pointer.longPress = false;
       pointer.immediateTouch = false;
       pointer.pointerId = pointer.active ? event.pointerId : null;
-
       lastHoldAbsorbAt = 0;
       pointer.downAt = performance.now();
       pointer.touchX = pointer.x;
       pointer.touchY = pointer.y;
-
       if (pressTimer) window.clearTimeout(pressTimer);
-
       if (!pointer.active) return;
-
       if (event.cancelable) event.preventDefault();
-
       if (paper.setPointerCapture && event.pointerId !== undefined) {
         try { paper.setPointerCapture(event.pointerId); } catch (error) {}
       }
-
       markInteractionPriority(1100);
-
+      triggerOrganTouchPulse(pointer.x, pointer.y);
       pointer.downStrength = clamp(pointer.downStrength + .30, 0, 1);
       pointer.heat = clamp(pointer.heat + .18, 0, 1);
-
       pointer.immediateTouch = true;
       debugState.immediateTouchFeedback = true;
-
       debugLog("immediate touch feedback");
-
       showInteractiveObject(pointer.x, pointer.y);
-
     }, { passive: false });
 
     function finishPointer(event) {
@@ -3915,17 +3704,11 @@ th {
       }, 180);
     }, { passive: true });
 
-    const resizeObserver = new ResizeObserver(() => {
-      resize();
-      if (!window.__sceneReady) {
-        buildScene();
-        window.__sceneReady = true;
-      }
-    });
+    const resizeObserver = new ResizeObserver(resize);
     resizeObserver.observe(paper);
-
     buildReferenceMildew();
     resize();
+    runExhibitionWarmup();
     requestAnimationFrame(drawFrame);
   }
 
@@ -3933,71 +3716,6 @@ th {
     document.addEventListener("DOMContentLoaded", boot, { once: true });
   } else {
     boot();
-    
-    /* =========================
-      SAFE ADD-ON PATCH LAYER
-      (non-invasive enhancement)
-      ========================= */
-
-    /* 1. Resize fix for both canvases */
-    function resizeCanvases() {
-      const paper = document.querySelector('.paper');
-      const lesion = document.getElementById('lesionCanvas');
-      const interaction = document.getElementById('interactionCanvas');
-
-      if (!paper || !lesion || !interaction) return;
-
-      const rect = paper.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-
-      [lesion, interaction].forEach(canvas => {
-        canvas.width = rect.width * dpr;
-        canvas.height = rect.height * dpr;
-        canvas.style.width = rect.width + 'px';
-        canvas.style.height = rect.height + 'px';
-
-        const ctx = canvas.getContext('2d');
-        if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      });
-    }
-
-    /* 2. Warm-up renderer (prevents first interaction lag) */
-    function warmUpGPU() {
-      const canvas = document.getElementById('lesionCanvas');
-      if (!canvas) return;
-
-      const ctx = canvas.getContext('2d');
-
-      // dummy warm-up draw (safe, invisible)
-      for (let i = 0; i < 20; i++) {
-        ctx.beginPath();
-        ctx.arc(Math.random() * 100, Math.random() * 100, 0.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    /* 3. Touch latency reduction (important for iPad exhibition) */
-    function enableLowLatencyTouch() {
-      document.addEventListener('touchstart', () => {}, { passive: true });
-      document.addEventListener('touchmove', () => {}, { passive: true });
-    }
-
-    /* 4. Boot enhancer (non-invasive hook) */
-    function enhancedBoot() {
-      resizeCanvases();
-      warmUpGPU();
-      enableLowLatencyTouch();
-    }
-
-    /* auto bind */
-    window.addEventListener('load', () => {
-      enhancedBoot();
-    });
-
-    window.addEventListener('resize', () => {
-      resizeCanvases();
-    });
-
   }
 })();
 </script>
