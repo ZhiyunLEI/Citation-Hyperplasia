@@ -1,0 +1,12 @@
+{
+  "name": "Citation Hyperplasia",
+  "short_name": "Citation Hyperplasia",
+  "description": "Interactive media artwork for iPad exhibition playback.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#d1d1d1",
+  "theme_color": "#d1d1d1",
+  "icons": []
+}
