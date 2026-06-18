@@ -1467,6 +1467,7 @@ th {
     const FIXED_VISUAL_FRAME_MS = 50;
     let displayScale = 1;
     let visualTime = 0;
+    let visualClockStartedAt = 0;
     let last = 0;
     let currentBreath = { breath: 0, organ: 0, membrane: 0, ingest: 0, digest: 0, expel: 0, rest: 0, phase: 0 };
     let upperPlumeDensity = .52;
@@ -3525,7 +3526,8 @@ th {
       drawFrameCount++;
       frameToggle++;
       last = realTime - ((realTime - last) % currentFrameMs);
-      visualTime += FIXED_VISUAL_FRAME_MS;
+      if (!visualClockStartedAt) visualClockStartedAt = realTime;
+      visualTime = Math.floor((realTime - visualClockStartedAt) / FIXED_VISUAL_FRAME_MS) * FIXED_VISUAL_FRAME_MS;
       const time = visualTime;
       updateViewBounds();
       scrollSettle *= .86;
@@ -3559,7 +3561,6 @@ th {
       ctx.globalCompositeOperation = "source-over";
 
       const backgroundStride = scrolling ? 4 : interactionPriority ? 4 : interactionActive ? 2 : 3;
-      const denseStride = scrolling ? 5 : interactionPriority ? 4 : interactionActive ? 3 : 4;
       const drawBackground = interactionPriority
         ? frameToggle % 2 === 0
         : (!scrolling || interactionActive || frameToggle % 2 === 0);
@@ -3569,9 +3570,9 @@ th {
         drawTendril(tendril, time, breath, heat);
         if (interactionActive || frameToggle % 2 === 0) drawPulledFragments(tendril, time, breath);
       }
-      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawSwallowStreams(time, breath);
-      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawAbsorbedFragments(time, breath);
-      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawUpperBridgeParticles(time, breath);
+      if (!scrolling) drawSwallowStreams(time, breath);
+      if (!scrolling) drawAbsorbedFragments(time, breath);
+      if (!scrolling) drawUpperBridgeParticles(time, breath);
       if (drawBackground) drawMutationRopes(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawSpiderWebs(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawMutationSheets(time, breath);
@@ -3582,7 +3583,7 @@ th {
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawLifeMotes(time, breath);
       drawClotMass(time, breath, heat);
 
-      for (let i = frameToggle % denseStride; i < residues.length; i += denseStride) {
+      for (let i = 0; i < residues.length; i += 1) {
         const particle = residues[i];
         if (!isPointVisible(particle.x, particle.y, 110)) continue;
         const local = time * (.000025 + startupEase * .000036) + particle.phase;
@@ -3601,7 +3602,7 @@ th {
         ctx.restore();
       }
 
-      for (let i = frameToggle % denseStride; i < nuclei.length; i += denseStride) {
+      for (let i = 0; i < nuclei.length; i += 1) {
         if (!isPointVisible(nuclei[i].x, nuclei[i].y, 120)) continue;
         drawTextParticle(nuclei[i], time, breath, heat);
       }
