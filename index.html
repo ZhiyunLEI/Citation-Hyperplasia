@@ -1364,13 +1364,14 @@ th {
   function relativeRect(element, root) {
     const a = element.getBoundingClientRect();
     const b = root.getBoundingClientRect();
+    const scale = Math.max(.1, displayScale || 1);
     return {
-      left: a.left - b.left,
-      top: a.top - b.top,
-      width: a.width,
-      height: a.height,
-      right: a.right - b.left,
-      bottom: a.bottom - b.top
+      left: (a.left - b.left) / scale,
+      top: (a.top - b.top) / scale,
+      width: a.width / scale,
+      height: a.height / scale,
+      right: (a.right - b.left) / scale,
+      bottom: (a.bottom - b.top) / scale
     };
   }
 
