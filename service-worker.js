@@ -1,4 +1,4 @@
-const CACHE_NAME = "citation-hyperplasia-performance-v9";
+const CACHE_NAME = "citation-hyperplasia-performance-v11";
 
 const ASSETS = [
   "./",
