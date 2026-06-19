@@ -1580,7 +1580,6 @@ th {
 
     function updateViewBounds() {
       const rect = paper.getBoundingClientRect();
-      displayScale = rect.width ? rect.width / Math.max(1, width || ART_WIDTH) : displayScale;
       const scale = Math.max(.1, displayScale || 1);
       const bufferY = Math.max(220, window.innerHeight * .42 / scale);
       const bufferX = Math.max(140, window.innerWidth * .22 / scale);
@@ -3616,8 +3615,7 @@ th {
 
     function updatePointerFromEvent(event) {
       const rect = paper.getBoundingClientRect();
-      const scale = rect.width ? rect.width / Math.max(1, width || ART_WIDTH) : (displayScale || 1);
-      displayScale = scale || displayScale;
+      const scale = Math.max(.1, displayScale || 1);
       pointer.x = (event.clientX - rect.left) / Math.max(.1, scale);
       pointer.y = (event.clientY - rect.top) / Math.max(.1, scale);
       if (body) {
