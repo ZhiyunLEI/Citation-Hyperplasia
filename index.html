@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Citation Hyperplasia — Performance Preview</title>
 <link rel="manifest" href="manifest.webmanifest">
+<script>
+  (() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("freeze") || params.get("diag") === "static") {
+      document.documentElement.classList.add("freeze-requested");
+    }
+  })();
+</script>
 <style>
 :root {
   --paper-width: 990px;
@@ -47,6 +55,11 @@ body {
 
 body.is-warming .stage {
   opacity: 0;
+}
+
+html.freeze-requested body.is-warming .stage,
+body.is-animation-frozen .stage {
+  opacity: 1;
 }
 
 .paper {
@@ -391,6 +404,15 @@ body.is-mobile-profile .lesion-canvas {
 .paper.is-interacting .lesion-layer,
 .paper.is-scrolling .lesion-layer {
   animation-play-state: paused;
+}
+
+html.freeze-requested .lesion-layer,
+html.freeze-requested .lesion-organism::before,
+html.freeze-requested .lesion-organism::after,
+body.is-animation-frozen .lesion-layer,
+body.is-animation-frozen .lesion-organism::before,
+body.is-animation-frozen .lesion-organism::after {
+  animation-play-state: paused !important;
 }
 
 
@@ -1514,6 +1536,10 @@ th {
     let animatedDomSpanCount = 0;
     const urlParams = new URLSearchParams(window.location.search);
     const debugMode = urlParams.has("debug");
+    const freezeAnimation = urlParams.has("freeze") || urlParams.get("diag") === "static";
+    const frozenVisualTime = Number.parseFloat(urlParams.get("freezeTime") || "9600");
+    document.body.classList.toggle("is-animation-frozen", freezeAnimation);
+    if (freezeAnimation) revealStage();
     const lesionAssetNames = [
       "lesion_depth_shadow.webp",
       "lesion_tendrils.webp",
@@ -3559,32 +3585,37 @@ th {
     }
 
     function drawFrame(realTime) {
+      const drawTime = freezeAnimation ? frozenVisualTime : realTime;
       const interactionActive =
-        pointer.downActive ||
-        pointer.tapHeat > .035 ||
-        pointer.pressHeat > .040 ||
-        pointer.releaseHeat > .035 ||
-        pointer.longSignalHeat > .040 ||
-        interactionBursts.length > 0;
-      const interactionPriority = realTime < interactionPriorityUntil;
-      const scrolling = scrollSettle > .34;
+        !freezeAnimation && (
+          pointer.downActive ||
+          pointer.tapHeat > .035 ||
+          pointer.pressHeat > .040 ||
+          pointer.releaseHeat > .035 ||
+          pointer.longSignalHeat > .040 ||
+          interactionBursts.length > 0
+        );
+      const interactionPriority = !freezeAnimation && realTime < interactionPriorityUntil;
+      const scrolling = !freezeAnimation && scrollSettle > .34;
       const currentFrameMs = interactionActive ? interactionFrameMs : idleFrameMs;
       paper.classList.toggle("is-interacting", interactionActive);
       paper.classList.toggle("is-scrolling", scrolling);
-      if (realTime - last < currentFrameMs) {
+      if (!freezeAnimation && realTime - last < currentFrameMs) {
         requestAnimationFrame(drawFrame);
         return;
       }
       if (last) {
-        drawFpsLast = 1000 / (realTime - last);
+        drawFpsLast = freezeAnimation ? 0 : 1000 / (realTime - last);
         drawFpsSamples.push(drawFpsLast);
         if (drawFpsSamples.length > 240) drawFpsSamples.shift();
       }
       drawFrameCount++;
-      frameToggle++;
-      last = realTime - ((realTime - last) % currentFrameMs);
-      if (!visualClockStartedAt) visualClockStartedAt = realTime;
-      visualTime = Math.floor((realTime - visualClockStartedAt) / FIXED_VISUAL_FRAME_MS) * FIXED_VISUAL_FRAME_MS;
+      if (!freezeAnimation) frameToggle++;
+      last = freezeAnimation ? realTime : realTime - ((realTime - last) % currentFrameMs);
+      if (!visualClockStartedAt) visualClockStartedAt = freezeAnimation ? 0 : realTime;
+      visualTime = freezeAnimation
+        ? drawTime
+        : Math.floor((realTime - visualClockStartedAt) / FIXED_VISUAL_FRAME_MS) * FIXED_VISUAL_FRAME_MS;
       const time = visualTime;
       updateViewBounds();
       scrollSettle *= .86;
@@ -3617,11 +3648,11 @@ th {
       ctx.clearRect(0, 0, width, height);
       ctx.globalCompositeOperation = "source-over";
 
-      const backgroundStride = scrolling ? 4 : interactionPriority ? 4 : interactionActive ? 2 : 3;
+      const backgroundStride = freezeAnimation ? 1 : scrolling ? 4 : interactionPriority ? 4 : interactionActive ? 2 : 3;
       const drawBackground = interactionPriority
         ? frameToggle % 2 === 0
-        : (!scrolling || interactionActive || frameToggle % 2 === 0);
-      const drawFusionConnectors = stableIpadParticleMode || !scrolling;
+        : (freezeAnimation || !scrolling || interactionActive || frameToggle % 2 === 0);
+      const drawFusionConnectors = freezeAnimation || stableIpadParticleMode || !scrolling;
 
       for (let i = frameToggle % backgroundStride; i < tendrils.length; i += backgroundStride) {
         const tendril = tendrils[i];
