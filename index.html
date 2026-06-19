@@ -1534,6 +1534,25 @@ th {
       return shouldUseMobileAssets() ? "assets/lesions-mobile" : "assets/lesions-opt";
     }
 
+    const stableIpadParticleMode = shouldUseMobileAssets() && !urlParams.has("fullmotion");
+
+    function hashUnit(value) {
+      const raw = Math.sin(value * 12.9898 + seed * .00017) * 43758.5453;
+      return raw - Math.floor(raw);
+    }
+
+    function particleMotionFactor(particle, emphasis = 0) {
+      if (!stableIpadParticleMode) return 1;
+      const roll = hashUnit((particle.phase || 0) + (particle.x || 0) * .013 + (particle.y || 0) * .017);
+      if (roll > .88) return .30 + emphasis * .18;
+      if (roll > .76) return .16 + emphasis * .10;
+      return .035 + emphasis * .045;
+    }
+
+    function connectorMotionFactor(emphasis = 0) {
+      return stableIpadParticleMode ? (.28 + emphasis * .16) : 1;
+    }
+
     function applyLesionAssetProfile() {
       const base = lesionAssetBase();
       document.querySelectorAll("[data-lesion-asset]").forEach((img) => {
@@ -2689,11 +2708,12 @@ th {
 
     function drawTextParticle(particle, time, breath, heat) {
       const startupEase = getStartupEase(time);
-      const local = time * (.000036 + startupEase * .000055) + particle.phase;
       const corePulse = Math.pow(particle.weight, 2.45);
+      const motionFactor = particleMotionFactor(particle, corePulse);
+      const local = time * (.000036 + startupEase * .000055) * motionFactor + particle.phase;
       const syncBreath = breath * .44 + currentBreath.organ * .56;
-      const motionGate = .13 + startupEase * .49;
-      const pulse = Math.sin(local * .92) * syncBreath;
+      const motionGate = (.13 + startupEase * .49) * motionFactor;
+      const pulse = Math.sin(local * .92) * syncBreath * (.30 + motionFactor * .70);
       const edgeStillness = .08 + corePulse * .92;
       const x = particle.x + Math.cos(local * .72) * particle.amp * (.016 + syncBreath * .074 * edgeStillness + heat * .030 * corePulse) * motionGate;
       const y = particle.y + Math.sin(local * .64) * particle.amp * (.016 + syncBreath * .080 * edgeStillness + heat * .030 * corePulse) * motionGate;
@@ -2735,10 +2755,11 @@ th {
       const startupEase = getStartupEase(time);
       for (const clot of clots) {
         if (!isPointVisible(clot.x, clot.y, 140)) continue;
-        const local = time * (.000032 + startupEase * .000050) + clot.phase;
         const corePulse = Math.pow(clot.core, 2.1);
+        const motionFactor = particleMotionFactor(clot, corePulse);
+        const local = time * (.000032 + startupEase * .000050) * motionFactor + clot.phase;
         const organ = currentBreath.organ;
-        const motionGate = .13 + startupEase * .49;
+        const motionGate = (.13 + startupEase * .49) * motionFactor;
         const swell = .975 + organ * .064 * corePulse + breath * .034 * corePulse + Math.sin(local * .76) * .007 * corePulse + heat * .012 * corePulse;
         const x = clot.x + Math.cos(local * .72) * clot.amp * (.016 + organ * .046 * corePulse) * motionGate;
         const y = clot.y + Math.sin(local * .62) * clot.amp * (.016 + organ * .052 * corePulse) * motionGate;
@@ -2767,9 +2788,10 @@ th {
       const density = upperPlumeDensity;
       for (const particle of upperBridgeParticles) {
         if (!isPointVisible(particle.x, particle.y, 110)) continue;
-        const local = time * (.000020 + particle.drift * .000018) + particle.phase;
+        const motionFactor = particleMotionFactor(particle, 1 - particle.upperBias * .55);
+        const local = time * (.000020 + particle.drift * .000018) * motionFactor + particle.phase;
         const metabolic = currentBreath.ingest * .46 + currentBreath.digest * .28 + currentBreath.organ * .18 + breath * .18;
-        const flow = .18 + density * .34 + metabolic * .28;
+        const flow = (.18 + density * .34 + metabolic * .28) * (.34 + motionFactor * .66);
         const x = particle.x
           + Math.cos(local * .76) * particle.amp * (.16 + flow * .16)
           - particle.outward * body.rx * (currentBreath.ingest * .014 + currentBreath.digest * .006);
@@ -2806,11 +2828,12 @@ th {
 
     function drawTendril(tendril, time, breath, heat) {
       if (!isCurveVisible(tendril, 160)) return;
+      const motionFactor = connectorMotionFactor(.45);
       const steps = Math.max(10, Math.round(58 / (tendril.glyphStep / 16)));
       for (let i = 0; i <= steps; i++) {
         const t = i / steps;
         const rootPulse = Math.pow(1 - t, 2.2);
-        const wiggle = Math.sin(time * .00018 + tendril.phase + t * 9) * tendril.width * (.018 + breath * .030 * rootPulse + heat * .016 * rootPulse);
+        const wiggle = Math.sin(time * .00018 * motionFactor + tendril.phase + t * 9) * tendril.width * (.018 + breath * .030 * rootPulse + heat * .016 * rootPulse) * motionFactor;
         const x = cubic(tendril.x0, tendril.x1, tendril.x2, tendril.x3, t) + Math.sin(t * Math.PI * 2 + tendril.phase) * wiggle;
         const y = cubic(tendril.y0, tendril.y1, tendril.y2, tendril.y3, t) + Math.cos(t * Math.PI * 2 + tendril.phase) * wiggle * .62;
         const nx = cubic(tendril.x0, tendril.x1, tendril.x2, tendril.x3, clamp(t + .015, 0, 1));
@@ -2822,7 +2845,7 @@ th {
 
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(angle + Math.sin(time * .00020 + i) * .042 * rootPulse);
+        ctx.rotate(angle + Math.sin(time * .00020 * motionFactor + i) * .042 * rootPulse * motionFactor);
         ctx.globalAlpha = clamp(.13 + density * .26 + breath * .044 * rootPulse, .07, .48);
         ctx.fillStyle = i % 11 === 0 ? "rgba(28,103,114,.42)" : i % 17 === 0 ? "rgba(95,50,88,.38)" : tendril.color;
         ctx.shadowColor = "rgba(0,0,0,.30)";
@@ -2835,6 +2858,7 @@ th {
 
     function drawPulledFragments(tendril, time, breath) {
       if (!isCurveVisible(tendril, 150)) return;
+      const motionFactor = connectorMotionFactor(.35);
       const fragments = [
         "[", "]", "(", ")", ".", ":", ";", "/", "0", "1", "3", "7",
         "[1]", "[3]", "[12]", "[27]", "1998", "2006", "2026", "10.", "10.0",
@@ -2843,7 +2867,7 @@ th {
       ];
       const streams = 4;
       for (let k = 0; k < streams; k++) {
-        const flow = (time * .000028 + tendril.phase * .113 + k / streams) % 1;
+        const flow = (time * .000028 * motionFactor + tendril.phase * .113 + k / streams) % 1;
         const t = 1 - flow;
         const x = cubic(tendril.x0, tendril.x1, tendril.x2, tendril.x3, t);
         const y = cubic(tendril.y0, tendril.y1, tendril.y2, tendril.y3, t);
@@ -3027,22 +3051,23 @@ th {
     }
 
     function drawExpelledWaste(time, breath) {
+      const motionFactor = connectorMotionFactor(.25);
       const steppedTime = Math.floor(time / 180) * 180;
       for (const waste of expelledWaste) {
         const expel = currentBreath.expel;
-        const local = (steppedTime * waste.speed * (.82 + expel * .30) + waste.phase + expel * .054) % 1;
+        const local = (steppedTime * waste.speed * (.82 + expel * .30) * motionFactor + waste.phase + expel * .054) % 1;
         const eased = local < .72
           ? Math.pow(local / .72, 1.35) * .72
           : .72 + (local - .72) * .82;
         const fall = eased * waste.flow;
         const expelPush = expel * waste.settle * .18;
         const streamBias = (waste.stream || 0) > .62 ? 1 : .52;
-        const x = waste.x + Math.sin(steppedTime * .00011 + waste.phase) * waste.side * .040 + eased * waste.side * (.38 + streamBias * .25 + expel * .08);
+        const x = waste.x + Math.sin(steppedTime * .00011 * motionFactor + waste.phase) * waste.side * .040 * motionFactor + eased * waste.side * (.38 + streamBias * .25 + expel * .08) * (.34 + motionFactor * .66);
         const y = waste.y + fall * waste.settle + expelPush + Math.pow(eased, 1.7) * (6 + streamBias * 10 + expel * 10);
         if (!isPointVisible(x, y, 110)) continue;
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(waste.rot + Math.sin(steppedTime * .00012 + waste.phase) * .045 + eased * (.20 + streamBias * .05));
+        ctx.rotate(waste.rot + Math.sin(steppedTime * .00012 * motionFactor + waste.phase) * .045 * motionFactor + eased * (.20 + streamBias * .05) * (.40 + motionFactor * .60));
         ctx.globalAlpha = clamp(waste.alpha * (1 - eased * .18) + breath * .008 + expel * (.052 + streamBias * .018), .038, .36);
         ctx.fillStyle = waste.alpha > .24 ? "rgba(16,14,12,.36)" : "rgba(72,62,47,.23)";
         ctx.shadowColor = "rgba(0,0,0,.18)";
@@ -3054,12 +3079,13 @@ th {
     }
 
     function drawSwallowStreams(time, breath) {
+      const motionFactor = connectorMotionFactor(.55);
       for (const stream of swallowStreams) {
         if (!isCurveVisible(stream, 180)) continue;
         const ingest = currentBreath.ingest;
         const digest = currentBreath.digest;
         const membrane = currentBreath.membrane;
-        const flex = Math.sin(time * .000082 + stream.phase * 9) * stream.width * (.048 + ingest * .052 + digest * .030);
+        const flex = Math.sin(time * .000082 * motionFactor + stream.phase * 9) * stream.width * (.048 + ingest * .052 + digest * .030) * motionFactor;
 
         ctx.save();
         ctx.beginPath();
@@ -3082,7 +3108,7 @@ th {
         ctx.restore();
 
         for (const fragment of stream.fragments) {
-          const raw = (time * stream.speed * (.66 + ingest * .22) + stream.phase + fragment.offset + ingest * .040 + digest * .018) % 1;
+          const raw = (time * stream.speed * (.66 + ingest * .22) * motionFactor + stream.phase + fragment.offset + ingest * .040 + digest * .018) % 1;
           const t = Math.pow(raw, .86 - ingest * .06);
           const x = cubic(stream.x0, stream.x1 + flex, stream.x2 - flex * .55, stream.x3, t);
           const y = cubic(stream.y0, stream.y1 - flex * .35, stream.y2 + flex * .42, stream.y3, t);
@@ -3090,7 +3116,7 @@ th {
           const ny = cubic(stream.y0, stream.y1, stream.y2, stream.y3, clamp(t + .018, 0, 1));
           const angle = Math.atan2(ny - y, nx - x);
           const swallowed = Math.pow(t, 1.65);
-          const side = Math.sin(time * .00015 + fragment.offset * 11) * fragment.side * (1 - swallowed * .60);
+          const side = Math.sin(time * .00015 * motionFactor + fragment.offset * 11) * fragment.side * (1 - swallowed * .60) * motionFactor;
           const normalX = Math.sin(angle + Math.PI / 2);
           const normalY = -Math.cos(angle + Math.PI / 2);
 
@@ -3109,9 +3135,10 @@ th {
     }
 
     function drawAbsorbedFragments(time, breath) {
+      const motionFactor = connectorMotionFactor(.40);
       for (const fragment of absorbedFragments) {
         if (!isCurveVisible(fragment, 150)) continue;
-        const flow = (time * fragment.speed + fragment.phase + currentBreath.digest * .018) % 1;
+        const flow = (time * fragment.speed * motionFactor + fragment.phase + currentBreath.digest * .018) % 1;
         const t = Math.pow(flow, .88);
         const x = cubic(fragment.x0, fragment.x1, fragment.x2, fragment.x3, t);
         const y = cubic(fragment.y0, fragment.y1, fragment.y2, fragment.y3, t);
@@ -3119,11 +3146,11 @@ th {
         const ny = cubic(fragment.y0, fragment.y1, fragment.y2, fragment.y3, clamp(t + .018, 0, 1));
         const angle = Math.atan2(ny - y, nx - x);
         const digestion = Math.pow(t, 1.5);
-        const side = Math.sin(time * .00011 + fragment.phase * 7) * fragment.side * .46 * (1 - digestion * .45);
+        const side = Math.sin(time * .00011 * motionFactor + fragment.phase * 7) * fragment.side * .46 * (1 - digestion * .45) * motionFactor;
 
         ctx.save();
         ctx.translate(x + Math.sin(angle + Math.PI / 2) * side, y - Math.cos(angle + Math.PI / 2) * side * .55);
-        ctx.rotate(angle + fragment.rot * (1 - digestion * .60) + Math.sin(time * .00014 + fragment.phase) * .034);
+        ctx.rotate(angle + fragment.rot * (1 - digestion * .60) + Math.sin(time * .00014 * motionFactor + fragment.phase) * .034 * motionFactor);
         ctx.globalAlpha = clamp(fragment.alpha * (1 - digestion * .42) + currentBreath.digest * .030 + breath * .010, .035, .22);
         ctx.fillStyle = fragment.char.length > 1 ? "rgba(45,39,32,.25)" : "rgba(24,21,18,.31)";
         ctx.shadowColor = "rgba(22,17,14,.14)";
@@ -3137,13 +3164,14 @@ th {
     function drawLowerRightResidue(time, breath) {
       for (const residue of lowerRightResidue) {
         if (!isPointVisible(residue.x, residue.y, 100)) continue;
-        const local = time * .00015 + residue.phase;
+        const motionFactor = particleMotionFactor(residue, .2);
+        const local = time * .00015 * motionFactor + residue.phase;
         ctx.save();
         ctx.translate(
-          residue.x + Math.cos(local * .75) * residue.amp * .070,
-          residue.y + Math.sin(local * .60) * residue.amp * .065
+          residue.x + Math.cos(local * .75) * residue.amp * .070 * motionFactor,
+          residue.y + Math.sin(local * .60) * residue.amp * .065 * motionFactor
         );
-        ctx.rotate(residue.rot + Math.sin(local) * .026);
+        ctx.rotate(residue.rot + Math.sin(local) * .026 * motionFactor);
         ctx.globalAlpha = clamp(residue.alpha + breath * .025, .04, .30);
         ctx.fillStyle = "rgba(50,42,34,.20)";
         ctx.shadowColor = "rgba(68,56,40,.18)";
@@ -3567,15 +3595,16 @@ th {
       const drawBackground = interactionPriority
         ? frameToggle % 2 === 0
         : (!scrolling || interactionActive || frameToggle % 2 === 0);
+      const drawFusionConnectors = stableIpadParticleMode || !scrolling;
 
       for (let i = frameToggle % backgroundStride; i < tendrils.length; i += backgroundStride) {
         const tendril = tendrils[i];
         drawTendril(tendril, time, breath, heat);
         if (interactionActive || frameToggle % 2 === 0) drawPulledFragments(tendril, time, breath);
       }
-      if (!scrolling) drawSwallowStreams(time, breath);
-      if (!scrolling) drawAbsorbedFragments(time, breath);
-      if (!scrolling) drawUpperBridgeParticles(time, breath);
+      if (drawFusionConnectors) drawSwallowStreams(time, breath);
+      if (drawFusionConnectors) drawAbsorbedFragments(time, breath);
+      if (drawFusionConnectors) drawUpperBridgeParticles(time, breath);
       if (drawBackground) drawMutationRopes(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawSpiderWebs(time, breath);
       if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawMutationSheets(time, breath);
@@ -3589,8 +3618,9 @@ th {
       for (let i = 0; i < residues.length; i += 1) {
         const particle = residues[i];
         if (!isPointVisible(particle.x, particle.y, 110)) continue;
-        const local = time * (.000025 + startupEase * .000036) + particle.phase;
-        const motionGate = .16 + startupEase * .40;
+        const motionFactor = particleMotionFactor(particle, .24);
+        const local = time * (.000025 + startupEase * .000036) * motionFactor + particle.phase;
+        const motionGate = (.16 + startupEase * .40) * motionFactor;
         const syncBreath = breath * .38 + currentBreath.organ * .62;
         ctx.save();
         ctx.translate(
