@@ -1,16 +1,16 @@
-const CACHE_NAME = "citation-hyperplasia-performance-v11";
+const CACHE_NAME = "citation-hyperplasia-mac-exhibition-v4";
 
 const ASSETS = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
-  "./assets/lesions-mobile/lesion_core_main.webp",
-  "./assets/lesions-mobile/lesion_membrane_overlay.webp",
-  "./assets/lesions-mobile/lesion_tendrils.webp",
-  "./assets/lesions-mobile/lesion_edge_debris.webp",
-  "./assets/lesions-mobile/lesion_depth_shadow.webp",
-  "./assets/lesions-mobile/lesion_micro_citation_dust.webp",
-  "./assets/lesions-mobile/lesion_interactive_objects.webp"
+  "./assets/lesions-opt/lesion_core_main.webp",
+  "./assets/lesions-opt/lesion_membrane_overlay.webp",
+  "./assets/lesions-opt/lesion_tendrils.webp",
+  "./assets/lesions-opt/lesion_edge_debris_lite.webp",
+  "./assets/lesions-opt/lesion_depth_shadow_lite.webp",
+  "./assets/lesions-opt/lesion_micro_citation_dust_lite.webp",
+  "./assets/lesions-opt/lesion_interactive_objects.webp"
 ];
 
 self.addEventListener("install", (event) => {
