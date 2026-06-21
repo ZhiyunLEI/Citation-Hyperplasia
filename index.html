@@ -886,6 +886,7 @@ th {
   position: relative;
   z-index: 10;
   isolation: isolate;
+  --ref-waste: 0;
 }
 
 .references h2 {
@@ -913,9 +914,23 @@ th {
 
 .references p:nth-of-type(-n+3) {
   z-index: 5;
+  top: calc(var(--ref-waste, 0) * .55px);
+  letter-spacing: calc(var(--ref-waste, 0) * .018px);
+  filter: saturate(calc(1 - var(--ref-waste, 0) * .05)) contrast(calc(1 + var(--ref-waste, 0) * .025));
   text-shadow:
     .35px .20px 0 rgba(251,250,246,.62),
-    -.25px -.15px 0 rgba(251,250,246,.42);
+    -.25px -.15px 0 rgba(251,250,246,.42),
+    calc(var(--ref-waste, 0) * .36px) calc(var(--ref-waste, 0) * .16px) calc(var(--ref-waste, 0) * .8px) rgba(54,43,35,.20);
+}
+
+.references p:nth-of-type(2) {
+  top: calc(var(--ref-waste, 0) * -.36px);
+  letter-spacing: calc(var(--ref-waste, 0) * .012px);
+}
+
+.references p:nth-of-type(3) {
+  top: calc(var(--ref-waste, 0) * .24px);
+  letter-spacing: calc(var(--ref-waste, 0) * .010px);
 }
 
 .reference-mildew {
@@ -1005,8 +1020,8 @@ th {
     rotate(calc(var(--lesion-rot, 0deg) * .36))
     scale(var(--lesion-scale, 1));
   text-shadow:
-    0 0 var(--lesion-shadow, 0px) rgba(16, 14, 13, .46),
-    var(--lesion-smear-x, 0px) var(--lesion-smear-y, 0px) 0 rgba(18, 16, 16, .28);
+    0 0 var(--lesion-shadow, 0px) rgba(35, 27, 24, .38),
+    var(--lesion-smear-x, 0px) var(--lesion-smear-y, 0px) 0 rgba(61, 48, 39, .22);
 }
 
 .infection-near .infected-char {
@@ -1372,10 +1387,10 @@ th {
       const scale = 1 + rng() * (.09 + severity * (options.chaotic ? .70 : .48));
       const colorRoll = rng();
       const color =
-        colorRoll > .982 ? "rgba(18,104,115,.92)" :
-        colorRoll > .960 ? "rgba(96,47,79,.88)" :
-        colorRoll > .930 ? "rgba(86,85,38,.88)" :
-        "rgba(" + Math.floor(6 + rng() * (34 - severity * 12)) + "," + Math.floor(5 + rng() * (27 - severity * 9)) + "," + Math.floor(4 + rng() * (28 - severity * 10)) + ",.98)";
+        colorRoll > .982 ? "rgba(25,98,108,.70)" :
+        colorRoll > .960 ? "rgba(90,51,77,.72)" :
+        colorRoll > .930 ? "rgba(86,78,42,.66)" :
+        "rgba(" + Math.floor(18 + rng() * (32 - severity * 8)) + "," + Math.floor(15 + rng() * (25 - severity * 7)) + "," + Math.floor(13 + rng() * (24 - severity * 7)) + "," + (.78 + severity * .13).toFixed(3) + ")";
 
       span.style.setProperty("--lesion-dx", dx.toFixed(2) + "px");
       span.style.setProperty("--lesion-dy", dy.toFixed(2) + "px");
@@ -1456,6 +1471,7 @@ th {
     const lesionCoreLayer = document.querySelector(".lesion-core");
     const lesionMembraneLayer = document.querySelector(".lesion-membrane");
     const lesionTendrilLayer = document.querySelector(".lesion-tendrils");
+    const referencesLayer = document.querySelector(".references");
     if (!paper || !canvas || !interactionCanvas) return;
 
     const rng = mulberry32(seed);
@@ -1478,8 +1494,10 @@ th {
     let clots = [];
     let residues = [];
     let edgeCrumbs = [];
+    let edgeFusionDust = [];
     let contactScars = [];
     let expelledWaste = [];
+    let referenceSediment = [];
     let lowerRightResidue = [];
     let absorbedFragments = [];
     let swallowStreams = [];
@@ -1506,6 +1524,7 @@ th {
     let lastBurstAt = 0;
     let lastHoldAbsorbAt = 0;
     let lastOrganPulseAt = 0;
+    let referenceWasteHeat = 0;
     let lastOrganHoverAt = 0;
     let interactionPriorityUntil = 0;
     let interactionLoadShedUntil = 0;
@@ -1677,7 +1696,7 @@ th {
         bounds.top <= viewBounds.bottom + margin;
     }
 
-    function markInteractionPriority(duration = 950, loadShedDuration = Math.max(duration, 1450)) {
+    function markInteractionPriority(duration = 950, loadShedDuration = Math.max(duration, 2000)) {
       const now = performance.now();
       interactionPriorityUntil = Math.max(interactionPriorityUntil, now + duration);
       interactionLoadShedUntil = Math.max(interactionLoadShedUntil, now + loadShedDuration);
@@ -1952,8 +1971,9 @@ th {
       organTouchPulse = clamp(organTouchPulse + (.32 + near * .46) * fatigue, 0, 1);
       organReflex = clamp(organReflex + (.018 + near * .034) * fatigue, 0, 1);
       organShudderHeat = clamp(organShudderHeat + (.48 + near * .58) * fatigue, 0, 1);
-      pointer.wetHeat = clamp(pointer.wetHeat + (.058 + near * .088) * fatigue, 0, 1);
-      pointer.pressHeat = clamp(pointer.pressHeat + (.034 + near * .058) * fatigue, 0, 1);
+      pointer.tapHeat = clamp(pointer.tapHeat + (.075 + near * .105) * fatigue, 0, 1);
+      pointer.wetHeat = clamp(pointer.wetHeat + (.072 + near * .104) * fatigue, 0, 1);
+      pointer.pressHeat = clamp(pointer.pressHeat + (.042 + near * .068) * fatigue, 0, 1);
     }
 
     function clearStressClasses() {
@@ -2009,8 +2029,8 @@ th {
       if (!debugMode && !force && now - lastStatsPublishAt < 1000) return;
       lastStatsPublishAt = now;
       const canvasParticles =
-        nuclei.length + clots.length + residues.length + edgeCrumbs.length + contactScars.length +
-        expelledWaste.length + lowerRightResidue.length +
+        nuclei.length + clots.length + residues.length + edgeCrumbs.length + edgeFusionDust.length + contactScars.length +
+        expelledWaste.length + referenceSediment.length + lowerRightResidue.length +
         absorbedFragments.length +
         swallowStreams.reduce((sum, stream) => sum + stream.fragments.length + 1, 0) +
         upperBridgeParticles.length +
@@ -2030,8 +2050,10 @@ th {
         clots: clots.length,
         residues: residues.length,
         edgeCrumbs: edgeCrumbs.length,
+        edgeFusionDust: edgeFusionDust.length,
         contactScars: contactScars.length,
         expelledWaste: expelledWaste.length,
+        referenceSediment: referenceSediment.length,
         lowerRightResidue: lowerRightResidue.length,
         absorbedFragments: absorbedFragments.length,
         swallowStreams: swallowStreams.length,
@@ -2120,27 +2142,65 @@ th {
       return t * t * (3 - 2 * t);
     }
 
+    function tissueInk(alpha, warmth = .5, violet = .25) {
+      const r = Math.round(24 + warmth * 36 + violet * 10);
+      const g = Math.round(19 + warmth * 27);
+      const b = Math.round(16 + warmth * 20 + violet * 18);
+      return `rgba(${r},${g},${b},${clamp(alpha, 0, 1).toFixed(3)})`;
+    }
+
+    function tissueShadow(alpha, violet = .18) {
+      const r = Math.round(12 + violet * 28);
+      const g = Math.round(8 + violet * 18);
+      const b = Math.round(7 + violet * 24);
+      return `rgba(${r},${g},${b},${clamp(alpha, 0, 1).toFixed(3)})`;
+    }
+
+    function bodyMotionCoupling(x, y, strength = 1) {
+      if (!body) return { x, y, rot: 0, scale: 1, edge: 0 };
+      const dx = (x - body.x) / body.rx;
+      const dy = (y - body.y) / body.ry;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      const edge = Math.max(
+        clamp(1 - Math.abs(dist - 1.02) / .66, 0, 1),
+        clamp(1 - dist / 1.36, 0, 1) * .55
+      ) * strength;
+      if (edge <= .001) return { x, y, rot: 0, scale: 1, edge: 0 };
+      const ingestPull = currentBreath.ingest * .0085 + currentBreath.digest * .0058;
+      const expelPush = currentBreath.expel * .0046;
+      const membraneSwell = currentBreath.membrane * .006 + currentBreath.organ * .004;
+      const radial = (expelPush - ingestPull) * edge;
+      const shear = Math.sin(currentBreath.phase * Math.PI * 2 + dx * 1.7 - dy * 1.2) * edge;
+      return {
+        x: x + dx * body.rx * radial + (-dy) * body.rx * .0024 * shear,
+        y: y + dy * body.ry * radial + dx * body.ry * .0020 * shear + currentBreath.expel * edge * 2.1,
+        rot: shear * .020 + (currentBreath.digest - currentBreath.ingest) * edge * .010,
+        scale: 1 + membraneSwell * edge,
+        edge
+      };
+    }
+
     function getBreathState(time, activity = 1) {
       const cycle = 36500;
       const phase = (((time - animationStartedAt) / cycle) + .34) % 1;
       const ingest = Math.pow(
         smoothStep(.12, .36, phase) * (1 - smoothStep(.48, .64, phase)),
-        1.18
+        1.08
       ) * activity;
       const digest = Math.pow(
         smoothStep(.34, .56, phase) * (1 - smoothStep(.70, .86, phase)),
-        1.28
+        1.18
       ) * activity;
       const expel = Math.pow(
         smoothStep(.62, .79, phase) * (1 - smoothStep(.90, 1, phase)),
-        1.15
+        1.08
       ) * activity;
-      const organ = clamp(.13 + ingest * .38 + digest * .34 + expel * .14, .075, 1) * activity;
-      const membrane = clamp(.10 + ingest * .18 + digest * .42 + expel * .18, 0, 1) * activity;
+      const organ = clamp(.13 + ingest * .42 + digest * .40 + expel * .16, .075, 1) * activity;
+      const membrane = clamp(.10 + ingest * .20 + digest * .46 + expel * .20, 0, 1) * activity;
       const rest = clamp(smoothStep(.84, .98, phase) + (1 - smoothStep(.00, .10, phase)), 0, 1);
       return {
         phase,
-        breath: clamp(.085 + organ * .34 + ingest * .12 + digest * .24 + expel * .10, 0, .72),
+        breath: clamp(.085 + organ * .34 + ingest * .14 + digest * .27 + expel * .11, 0, .74),
         organ,
         membrane,
         ingest,
@@ -2203,6 +2263,9 @@ th {
       const refs = document.querySelector(".references");
       const traceRect = trace ? relativeRect(trace, paper) : { top: height * .63, bottom: height * .70, left: width * .1, right: width * .9 };
       const refsRect = refs ? relativeRect(refs, paper) : { top: height * .72, bottom: height * .96, left: width * .08, right: width * .92 };
+      const referenceLineRects = refs
+        ? Array.from(refs.querySelectorAll("p")).slice(0, 3).map((line) => relativeRect(line, paper))
+        : [];
 
       body = {
         x: width * .64,
@@ -2411,6 +2474,45 @@ th {
         });
       }
 
+      edgeFusionDust = [];
+      const fusionGlyphs = [".", ".", ":", ";", "[", "]", "(", ")", "0", "1", "doi", "DOI", "pp.", "Q1", "SSCI", "[12]", "et"];
+      for (let i = 0; i < 112; i++) {
+        const band = localRng();
+        const angle =
+          band < .38 ? Math.PI * (.67 + localRng() * .28) :
+          band < .68 ? Math.PI * (.94 + localRng() * .36) :
+          band < .89 ? Math.PI * (.06 + localRng() * .27) :
+          Math.PI * (-.18 + localRng() * .26);
+        const radius = .91 + Math.pow(localRng(), 1.8) * .28;
+        const x = body.x + Math.cos(angle) * body.rx * radius + (localRng() - .5) * 24;
+        const y = body.y + Math.sin(angle) * body.ry * radius + (localRng() - .5) * 28;
+        const field = ((x - body.x) / body.rx) ** 2 + ((y - body.y) / body.ry) ** 2;
+        if (field < .72 || field > 1.58) continue;
+        const tangent = angle + Math.PI / 2 + (localRng() - .5) * .46;
+        const nearLower = y > body.y + body.ry * .28;
+        const nearLeft = x < body.x - body.rx * .36;
+        const contactBoost =
+          nearLeft && nearLower ? 1.30 :
+          nearLeft || nearLower ? 1.16 :
+          x > body.x + body.rx * .45 && y < body.y - body.ry * .28 ? 1.12 :
+          .92;
+        edgeFusionDust.push({
+          x,
+          y,
+          char: pick(localRng, fusionGlyphs),
+          size: ((nearLower ? 1.2 : 1.0) + Math.pow(localRng(), 1.9) * (nearLeft ? 3.7 : 4.75)) * (contactBoost > 1 ? 1.04 : .96),
+          rot: tangent,
+          phase: localRng() * Math.PI * 2,
+          alpha: (.036 + localRng() * (nearLower || nearLeft ? .100 : .074)) * contactBoost,
+          amp: .35 + localRng() * 1.25,
+          blur: .45 + localRng() * 1.52,
+          stain: localRng() > (contactBoost > 1.1 ? .55 : .64),
+          thread: localRng() > (contactBoost > 1.1 ? .66 : .72),
+          pull: .28 + localRng() * .72,
+          contactBoost
+        });
+      }
+
       contactScars = [];
       for (let i = 0; i < 22; i++) {
         const edgeSide = localRng();
@@ -2434,24 +2536,62 @@ th {
 
       expelledWaste = [];
       const wasteGlyphs = ["[", "]", "(", ")", "0", "1", "3", "7", ".", ":", ";", "/", "pp.", "[1]", "[3]", "[12]", "et al.", "doi", "DOI", "Q1", "SSCI", "h-index"];
-      for (let i = 0; i < 34; i++) {
+      const wasteLanes = [
+        { x0: -.42, x1: -.92, width: .18, stream: .82 },
+        { x0: -.06, x1: -.22, width: .14, stream: .56 },
+        { x0: .34, x1: .52, width: .16, stream: .74 }
+      ];
+      for (let i = 0; i < 40; i++) {
+        const lane = wasteLanes[i % wasteLanes.length];
         const t = localRng();
-        const stream = localRng();
-        const x = body.x + (t - .46) * body.rx * (stream > .62 ? 1.90 : 1.45) + (localRng() - .5) * 18;
-        const y = body.y + body.ry * (.88 + localRng() * .48) + (localRng() - .5) * 15;
+        const stream = lane.stream + (localRng() - .5) * .18;
+        const pathX = lane.x0 + (lane.x1 - lane.x0) * t + (localRng() - .5) * lane.width;
+        const x = body.x + pathX * body.rx + (localRng() - .5) * 12;
+        const y = body.y + body.ry * (.78 + t * .82) + (localRng() - .5) * 13;
         expelledWaste.push({
           x,
           y,
           char: pick(localRng, wasteGlyphs),
-          size: 1.15 + Math.pow(localRng(), 1.85) * (stream > .74 ? 4.2 : 3.25),
-          rot: (localRng() - .5) * Math.PI,
+          size: 1.05 + Math.pow(localRng(), 1.85) * (stream > .70 ? 3.9 : 3.0),
+          rot: (lane.x1 - lane.x0) * .55 + (localRng() - .5) * Math.PI * .58,
           phase: localRng() * Math.PI * 2,
-          speed: 1 / (13000 + localRng() * 7000),
-          flow: 14 + localRng() * 48,
-          side: (localRng() - .24) * (stream > .62 ? 24 : 14),
-          settle: .55 + localRng() * .75,
-          alpha: .055 + localRng() * (stream > .74 ? .26 : .18),
-          stream
+          speed: 1 / (15000 + localRng() * 8500),
+          flow: 16 + localRng() * 56,
+          side: (lane.x1 - lane.x0) * body.rx * (.08 + localRng() * .14) + (localRng() - .42) * (stream > .70 ? 14 : 9),
+          settle: .62 + localRng() * .78,
+          alpha: .050 + localRng() * (stream > .70 ? .22 : .15),
+          stream,
+          laneBias: lane.x1 - lane.x0,
+          trail: t
+        });
+      }
+
+      referenceSediment = [];
+      const sedimentGlyphs = [".", ".", ",", ":", ";", "[", "]", ")", "(", "0", "1", "doi", "pp.", "[3]", "[12]", "Q1", "SSCI"];
+      for (let i = 0; i < 38; i++) {
+        const lane = wasteLanes[i % wasteLanes.length];
+        const row = Math.min(2, Math.floor(i / 13));
+        const refLine = referenceLineRects[row];
+        const lineProgress = localRng();
+        const x = refLine
+          ? refLine.left + refLine.width * (.05 + lineProgress * .70) + (localRng() - .5) * 16
+          : body.x + lane.x1 * body.rx + (localRng() - .5) * body.rx * (.42 + row * .18);
+        const y = refLine
+          ? refLine.top + refLine.height * (.32 + localRng() * .45) + (localRng() - .5) * 6
+          : refsRect.top + 12 + row * (13 + localRng() * 10) + (localRng() - .5) * 9;
+        referenceSediment.push({
+          x,
+          y,
+          char: pick(localRng, sedimentGlyphs),
+          size: 1.0 + Math.pow(localRng(), 1.8) * (row === 0 ? 3.6 : 2.7),
+          rot: (lane.x1 - lane.x0) * .62 + (localRng() - .5) * Math.PI * .46,
+          phase: localRng() * Math.PI * 2,
+          alpha: .034 + localRng() * (row === 0 ? .118 : .082),
+          amp: .25 + localRng() * .80,
+          stain: localRng() > .58,
+          laneBias: lane.x1 - lane.x0,
+          row,
+          lineProgress
         });
       }
 
@@ -2712,8 +2852,14 @@ th {
       edgeCrumbs.forEach((crumb, index) => {
         crumb.activityTier = crumb.alpha > .34 && crumb.form !== "dust" ? "live" : (index % 4 === 0 ? "slow" : "still");
       });
+      edgeFusionDust.forEach((dust, index) => {
+        dust.activityTier = dust.thread || index % 5 === 0 ? "slow" : "still";
+      });
       contactScars.forEach((scar) => {
         scar.activityTier = "still";
+      });
+      referenceSediment.forEach((sediment, index) => {
+        sediment.activityTier = index % 5 === 0 ? "slow" : "still";
       });
       lowerRightResidue.forEach((residue, index) => {
         residue.activityTier = index % 4 === 0 ? "slow" : "still";
@@ -2848,24 +2994,29 @@ th {
       const motionGate = (.13 + startupEase * .49) * motionFactor;
       const pulse = particle.activityTier === "still" ? 0 : Math.sin(local * .92) * syncBreath * (.30 + motionFactor * .70);
       const edgeStillness = .08 + corePulse * .92;
-      const x = particle.x + Math.cos(local * .72) * particle.amp * (.016 + syncBreath * .074 * edgeStillness + heat * .030 * corePulse) * motionGate;
-      const y = particle.y + Math.sin(local * .64) * particle.amp * (.016 + syncBreath * .080 * edgeStillness + heat * .030 * corePulse) * motionGate;
+      const rawX = particle.x + Math.cos(local * .72) * particle.amp * (.016 + syncBreath * .074 * edgeStillness + heat * .030 * corePulse) * motionGate;
+      const rawY = particle.y + Math.sin(local * .64) * particle.amp * (.016 + syncBreath * .080 * edgeStillness + heat * .030 * corePulse) * motionGate;
+      const coupled = bodyMotionCoupling(rawX, rawY, .52 + corePulse * .74);
+      const x = coupled.x;
+      const y = coupled.y;
       const scale = 1 + pulse * .045 * corePulse + heat * .012 * corePulse;
 
       ctx.save();
       ctx.translate(x, y);
-      ctx.rotate(particle.rot + Math.sin(local * .58) * .020 * syncBreath * edgeStillness * motionGate);
+      ctx.rotate(particle.rot + Math.sin(local * .58) * .020 * syncBreath * edgeStillness * motionGate + coupled.rot);
       const form = particle.form || "dust";
       const stretch = form === "thread" ? 1.45 + corePulse * .28 : form === "spore" ? .88 : 1;
       const squash = form === "thread" ? .76 : form === "spore" ? 1.08 : 1;
-      ctx.scale(scale * stretch, scale * squash);
+      ctx.scale(scale * coupled.scale * stretch, scale * coupled.scale * squash);
       const plumeScale = particle.plumePeak ? (.72 + upperPlumeDensity * .28) : 1;
       ctx.globalAlpha = clamp(.105 + particle.weight * .205 + syncBreath * .040 * corePulse, .048, .34) * (particle.alphaScale || 1) * plumeScale;
-      ctx.fillStyle = particle.color;
+      ctx.fillStyle = particle.plumePeak || corePulse > .22
+        ? tissueInk(.24 + corePulse * .10, .34 + corePulse * .30, form === "spore" ? .42 : .24)
+        : particle.color;
       const compact = particle.char.length > 1;
       ctx.font = `${particle.weight > .48 ? 600 : 470} ${particle.size * (compact ? .48 : .54)}px "Times New Roman", Times, serif`;
       if (particle.blur) {
-        ctx.shadowColor = "rgba(0,0,0,.16)";
+        ctx.shadowColor = tissueShadow(.14 + corePulse * .06, form === "spore" ? .35 : .18);
         ctx.shadowBlur = particle.blur + syncBreath * 1.05 * corePulse + (form === "clot" ? .75 : form === "spore" ? .45 : 0);
       }
       if (form === "clot") {
@@ -2896,17 +3047,20 @@ th {
         const organ = clot.activityTier === "still" ? 0 : currentBreath.organ;
         const motionGate = (.13 + startupEase * .49) * motionFactor;
         const swell = .975 + organ * .064 * corePulse + (clot.activityTier === "still" ? 0 : breath) * .034 * corePulse + Math.sin(local * .76) * .007 * corePulse * tierMotion + heat * .012 * corePulse;
-        const x = clot.x + Math.cos(local * .72) * clot.amp * (.016 + organ * .046 * corePulse) * motionGate;
-        const y = clot.y + Math.sin(local * .62) * clot.amp * (.016 + organ * .052 * corePulse) * motionGate;
+        const rawX = clot.x + Math.cos(local * .72) * clot.amp * (.016 + organ * .046 * corePulse) * motionGate;
+        const rawY = clot.y + Math.sin(local * .62) * clot.amp * (.016 + organ * .052 * corePulse) * motionGate;
+        const coupled = bodyMotionCoupling(rawX, rawY, .58 + corePulse * .82);
+        const x = coupled.x;
+        const y = coupled.y;
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(clot.rot + Math.sin(local * .48) * .014 * corePulse * motionGate);
+        ctx.rotate(clot.rot + Math.sin(local * .48) * .014 * corePulse * motionGate + coupled.rot);
       const form = clot.form || "clot";
-      ctx.scale(swell * (form === "thread" ? 1.38 : form === "spore" ? .92 : 1), swell * (form === "thread" ? .78 : form === "spore" ? 1.08 : 1));
+      ctx.scale(swell * coupled.scale * (form === "thread" ? 1.38 : form === "spore" ? .92 : 1), swell * coupled.scale * (form === "thread" ? .78 : form === "spore" ? 1.08 : 1));
         const plumeScale = clot.plumePeak ? (.72 + upperPlumeDensity * .28) : 1;
         ctx.globalAlpha = clamp(clot.alpha * .68 + breath * .038 * corePulse, .026, .20) * plumeScale;
-        ctx.fillStyle = clot.color;
-        ctx.shadowColor = "rgba(0,0,0,.16)";
+        ctx.fillStyle = tissueInk(.22 + corePulse * .08, .42 + corePulse * .26, form === "spore" ? .38 : .20);
+        ctx.shadowColor = tissueShadow(.13 + corePulse * .06, form === "spore" ? .34 : .16);
         ctx.shadowBlur = .7 + breath * 1.85 * corePulse + (form === "clot" ? .55 : 0);
         ctx.font = `580 ${clot.size * .68}px "Times New Roman", Times, serif`;
         ctx.fillText(clot.char, 0, 0);
@@ -2927,27 +3081,30 @@ th {
         const local = time * (.000020 + particle.drift * .000018) * motionFactor + particle.phase;
         const metabolic = currentBreath.ingest * .46 + currentBreath.digest * .28 + currentBreath.organ * .18 + breath * .18;
         const flow = (.18 + density * .34 + metabolic * .28) * (.34 + motionFactor * .66);
-        const x = particle.x
+        const rawX = particle.x
           + Math.cos(local * .76) * particle.amp * (.16 + flow * .16)
           - particle.outward * body.rx * (currentBreath.ingest * .014 + currentBreath.digest * .006);
-        const y = particle.y
+        const rawY = particle.y
           + Math.sin(local * .58) * particle.amp * (.12 + flow * .12)
           + (currentBreath.ingest * .010 + currentBreath.digest * .008) * body.ry;
+        const coupled = bodyMotionCoupling(rawX, rawY, .30 + (1 - particle.upperBias) * .42);
+        const x = coupled.x;
+        const y = coupled.y;
         const mistPulse = Math.pow((Math.sin(local * .72) + 1) / 2, 1.65);
         const farLighten = clamp((particle.upperBias - .55) / .45, 0, 1) * clamp((particle.outward - .18) / .82, 0, 1);
         const alpha = clamp(particle.alpha * (.58 + density * .46) * (1 - farLighten * .18) + mistPulse * .018 + currentBreath.ingest * .040 + currentBreath.digest * .018, .052, .32);
 
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(particle.rot + Math.sin(local * .42) * .030);
+        ctx.rotate(particle.rot + Math.sin(local * .42) * .030 + coupled.rot * .72);
         const compact = particle.char.length > 1;
         const form = particle.form || "fragment";
-        if (form === "soft-clot") ctx.scale(1.12, .92);
-        if (form === "dust") ctx.scale(.86, .96);
+        if (form === "soft-clot") ctx.scale(1.12 * coupled.scale, .92 * coupled.scale);
+        if (form === "dust") ctx.scale(.86 * coupled.scale, .96 * coupled.scale);
         ctx.globalCompositeOperation = "multiply";
         ctx.globalAlpha = alpha;
-        ctx.fillStyle = compact ? "rgba(54,47,39,.24)" : "rgba(36,31,27,.27)";
-        ctx.shadowColor = "rgba(24,19,16,.18)";
+        ctx.fillStyle = compact ? tissueInk(.22, .52, .20) : tissueInk(.26, .36, .28);
+        ctx.shadowColor = tissueShadow(.16, .22);
         ctx.shadowBlur = particle.blur + density * 1.1 + currentBreath.digest * 1.2 + farLighten * .35;
         ctx.font = `${compact ? 500 : 560} ${particle.size * (compact ? .72 : .94)}px "Times New Roman", Times, serif`;
         ctx.fillText(particle.char, 0, 0);
@@ -3165,18 +3322,18 @@ th {
         const tierTime = particleTierTime(crumb, time);
         const tierMotion = particleTierMotion(crumb);
         const local = tierTime * .000070 + crumb.phase;
+        const rawX = crumb.x + Math.cos(local * .82) * crumb.amp * (.055 + breath * .070) * tierMotion;
+        const rawY = crumb.y + Math.sin(local * .66) * crumb.amp * (.055 + breath * .075) * tierMotion;
+        const coupled = bodyMotionCoupling(rawX, rawY, .48);
         ctx.save();
-        ctx.translate(
-          crumb.x + Math.cos(local * .82) * crumb.amp * (.055 + breath * .070) * tierMotion,
-          crumb.y + Math.sin(local * .66) * crumb.amp * (.055 + breath * .075) * tierMotion
-        );
-        ctx.rotate(crumb.rot + Math.sin(local) * .038 * tierMotion);
+        ctx.translate(coupled.x, coupled.y);
+        ctx.rotate(crumb.rot + Math.sin(local) * .038 * tierMotion + coupled.rot);
         const form = crumb.form || "dust";
         if (form === "thread") ctx.scale(1.42, .78);
         if (form === "clot") ctx.scale(.94, 1.08);
         ctx.globalAlpha = (crumb.alpha + breath * .064 * tierMotion) * .84;
-        ctx.fillStyle = crumb.alpha > .34 ? "rgba(22,19,17,.46)" : "rgba(78,68,52,.28)";
-        ctx.shadowColor = "rgba(0,0,0,.20)";
+        ctx.fillStyle = crumb.alpha > .34 ? tissueInk(.40, .30, .24) : tissueInk(.27, .58, .16);
+        ctx.shadowColor = tissueShadow(.18, .18);
         ctx.shadowBlur = 1.2 + breath * 1.8 + (form === "clot" ? .9 : 0);
         ctx.font = `${crumb.alpha > .34 ? 640 : 500} ${crumb.size * .84}px "Times New Roman", Times, serif`;
         ctx.fillText(crumb.char, 0, 0);
@@ -3184,6 +3341,66 @@ th {
           ctx.globalAlpha *= .42;
           ctx.fillText(".", (crumb.spread || 1) * .65, -(crumb.spread || 1) * .25);
           ctx.fillText(crumb.char.length > 1 ? "." : crumb.char, -(crumb.spread || 1) * .50, (crumb.spread || 1) * .40);
+        }
+        ctx.restore();
+      }
+    }
+
+    function drawEdgeFusionDust(time, breath) {
+      if (!body) return;
+      for (const dust of edgeFusionDust) {
+        if (!isPointVisible(dust.x, dust.y, 95)) continue;
+        const tierTime = particleTierTime(dust, time);
+        const tierMotion = particleTierMotion(dust);
+        const local = tierTime * .000055 + dust.phase;
+        const dx = (dust.x - body.x) / body.rx;
+        const dy = (dust.y - body.y) / body.ry;
+        const edgeField = Math.sqrt(dx * dx + dy * dy);
+        const edgeBite = clamp(1 - Math.abs(edgeField - 1.02) / .34, 0, 1);
+        const digest = currentBreath.digest;
+        const organ = currentBreath.organ;
+        const contactBoost = dust.contactBoost || 1;
+        const pullX = (body.x - dust.x) * (.004 + digest * .004) * dust.pull;
+        const pullY = (body.y - dust.y) * (.003 + organ * .003) * dust.pull;
+        const rawX = dust.x + pullX + Math.cos(local * .72) * dust.amp * (.040 + breath * .045) * tierMotion;
+        const rawY = dust.y + pullY + Math.sin(local * .62) * dust.amp * (.035 + breath * .050) * tierMotion;
+        const coupled = bodyMotionCoupling(rawX, rawY, .55 * contactBoost);
+        const x = coupled.x;
+        const y = coupled.y;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(dust.rot + Math.sin(local * .58) * .022 * tierMotion + coupled.rot);
+        ctx.globalCompositeOperation = "multiply";
+
+        if (dust.stain) {
+          ctx.globalAlpha = clamp(dust.alpha * (.56 + edgeBite * .48) + digest * .019, .020, .124);
+          const stain = ctx.createRadialGradient(0, 0, 0, 0, 0, dust.size * (5.5 + edgeBite * 2.8) * contactBoost);
+          stain.addColorStop(0, "rgba(66,50,43,.24)");
+          stain.addColorStop(.45, "rgba(92,72,60,.086)");
+          stain.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = stain;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, dust.size * (5.3 + edgeBite * 2.25) * contactBoost, dust.size * (1.16 + edgeBite * 1.0), 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        ctx.globalAlpha = clamp(dust.alpha + breath * .026 + digest * .021, .026, .165);
+        ctx.fillStyle = dust.char.length > 2 ? tissueInk(.25, .56, .18) : tissueInk(.30, .36, .30);
+        ctx.shadowColor = tissueShadow(.13, .26);
+        ctx.shadowBlur = dust.blur + digest * 1.40 + edgeBite * .78;
+        ctx.font = `${dust.char.length > 2 ? 480 : 560} ${dust.size * (dust.char.length > 2 ? .62 : .82)}px "Times New Roman", Times, serif`;
+        if (dust.thread) {
+          ctx.scale(1.82 + edgeBite * .52, .56);
+          ctx.fillText(dust.char, 0, 0);
+          ctx.globalAlpha *= .28;
+          ctx.fillText(".", dust.size * .75, -dust.size * .18);
+        } else {
+          ctx.fillText(dust.char, 0, 0);
+          if (edgeBite > .42) {
+            ctx.globalAlpha *= .30;
+            ctx.fillText(".", dust.size * .58, -dust.size * .24);
+          }
         }
         ctx.restore();
       }
@@ -3201,24 +3418,69 @@ th {
         const eased = local < .72
           ? Math.pow(local / .72, 1.35) * .72
           : .72 + (local - .72) * .82;
-        const expelGate = Math.pow(expel, 1.18);
-        const fall = eased * waste.flow * (1 + expelGate * .42);
-        const expelPush = expelGate * waste.settle * 18;
+        const expelGate = Math.pow(expel, 1.05);
+        const fall = eased * waste.flow * (1 + expelGate * .55);
+        const expelPush = expelGate * waste.settle * 24;
         const streamBias = (waste.stream || 0) > .62 ? 1 : .52;
-        const x = waste.x + Math.sin(steppedTime * .00008 * motionFactor + waste.phase) * waste.side * .030 * motionFactor + eased * waste.side * (.40 + streamBias * .28 + expelGate * .16) * (.34 + motionFactor * .66);
-        const y = waste.y + fall * waste.settle + expelPush + Math.pow(eased, 1.7) * (7 + streamBias * 14 + expelGate * 22);
+        const laneBias = waste.laneBias || 0;
+        const x = waste.x
+          + Math.sin(steppedTime * .00008 * motionFactor + waste.phase) * waste.side * .026 * motionFactor
+          + eased * waste.side * (.34 + streamBias * .24 + expelGate * .18) * (.34 + motionFactor * .66)
+          + expelGate * laneBias * 8;
+        const y = waste.y + fall * waste.settle + expelPush + Math.pow(eased, 1.7) * (12 + streamBias * 16 + expelGate * 34);
         if (!isPointVisible(x, y, 110)) continue;
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(waste.rot + Math.sin(steppedTime * .00010 * motionFactor + waste.phase) * .036 * motionFactor + eased * (.22 + streamBias * .07) * (.40 + motionFactor * .60));
-        ctx.globalAlpha = clamp(waste.alpha * (1 - eased * .16) + breath * .006 + expelGate * (.082 + streamBias * .030), .038, .40);
-        ctx.fillStyle = waste.alpha > .24 ? "rgba(16,14,12,.36)" : "rgba(72,62,47,.23)";
-        ctx.shadowColor = "rgba(0,0,0,.18)";
-        ctx.shadowBlur = .6 + breath * .8 + expelGate * 1.8;
+        ctx.rotate(waste.rot + Math.sin(steppedTime * .00010 * motionFactor + waste.phase) * .030 * motionFactor + eased * (.18 + streamBias * .06) * (.40 + motionFactor * .60));
+        ctx.globalAlpha = clamp(waste.alpha * (1 - eased * .14) + breath * .007 + expelGate * (.116 + streamBias * .042), .040, .44);
+        ctx.fillStyle = waste.alpha > .22 ? tissueInk(.34, .30, .18) : tissueInk(.23, .58, .12);
+        ctx.shadowColor = tissueShadow(.18, .16);
+        ctx.shadowBlur = .7 + breath * .75 + expelGate * 2.55;
         ctx.font = `${waste.alpha > .24 ? 620 : 480} ${waste.size * (1 - eased * .08)}px "Times New Roman", Times, serif`;
         ctx.fillText(waste.char, 0, 0);
         ctx.restore();
       }
+    }
+
+    function drawReferenceSediment(time, breath, loadShed = false) {
+      const motionFactor = connectorMotionFactor(.18);
+      const expelGate = Math.pow(currentBreath.expel, 1.08);
+      const stride = loadShed ? 2 : 1;
+      for (let i = loadShed ? frameToggle % stride : 0; i < referenceSediment.length; i += stride) {
+        const sediment = referenceSediment[i];
+        if (!isPointVisible(sediment.x, sediment.y, 90)) continue;
+        const tierTime = particleTierTime(sediment, time);
+        const tierMotion = particleTierMotion(sediment);
+        const local = tierTime * .000030 * motionFactor + sediment.phase;
+        const settle = .60 + expelGate * .55 + breath * .10;
+        const x = sediment.x + Math.sin(local * .72) * sediment.amp * .32 * motionFactor * tierMotion + expelGate * (sediment.laneBias || 0) * 3.0;
+        const y = sediment.y + Math.pow(expelGate, 1.4) * (5 + sediment.amp * 3.0) + Math.sin(local * .55) * sediment.amp * .18 * motionFactor * tierMotion;
+
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(sediment.rot + Math.sin(local) * .018 * motionFactor * tierMotion);
+        ctx.globalCompositeOperation = "multiply";
+        if (sediment.stain) {
+          ctx.globalAlpha = clamp(sediment.alpha * (.34 + expelGate * .36), .010, .070);
+          const stain = ctx.createRadialGradient(0, 0, 0, 0, 0, sediment.size * 5.2);
+          stain.addColorStop(0, "rgba(74,58,46,.16)");
+          stain.addColorStop(.55, "rgba(94,78,58,.052)");
+          stain.addColorStop(1, "rgba(0,0,0,0)");
+          ctx.fillStyle = stain;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, sediment.size * (4.4 + sediment.lineProgress * 1.4), sediment.size * (.72 + sediment.row * .10), 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.globalAlpha = clamp(sediment.alpha * settle + expelGate * .035, .024, .18);
+        ctx.fillStyle = sediment.char.length > 2 ? tissueInk(.22, .58, .12) : tissueInk(.27, .40, .20);
+        ctx.shadowColor = tissueShadow(.12, .12);
+        ctx.shadowBlur = .45 + expelGate * 1.25;
+        ctx.font = `${sediment.alpha > .11 ? 560 : 460} ${sediment.size * (sediment.char.length > 2 ? .66 : .82)}px "Times New Roman", Times, serif`;
+        if (sediment.row < 2) ctx.scale(1.16, .88);
+        ctx.fillText(sediment.char, 0, 0);
+        ctx.restore();
+      }
+      ctx.globalCompositeOperation = "source-over";
     }
 
     function drawSwallowStreams(time, breath) {
@@ -3230,7 +3492,7 @@ th {
         const membrane = currentBreath.membrane;
         const ingestGate = Math.pow(ingest, 1.18);
         const digestGate = Math.pow(digest, 1.12);
-        const flex = Math.sin(time * .000068 * motionFactor + stream.phase * 9) * stream.width * (.040 + ingestGate * .078 + digestGate * .026) * motionFactor;
+        const flex = Math.sin(time * .000068 * motionFactor + stream.phase * 9) * stream.width * (.040 + ingestGate * .094 + digestGate * .028) * motionFactor;
 
         ctx.save();
         ctx.beginPath();
@@ -3244,16 +3506,16 @@ th {
           stream.y3
         );
         ctx.globalCompositeOperation = "multiply";
-        ctx.globalAlpha = clamp(stream.alpha + ingestGate * .090 + digestGate * .026 + breath * .008, .026, .24);
+        ctx.globalAlpha = clamp(stream.alpha + ingestGate * .108 + digestGate * .030 + breath * .008, .026, .26);
         ctx.strokeStyle = "rgba(42,34,29,.28)";
-        ctx.lineWidth = .38 + membrane * .34 + ingestGate * .44;
+        ctx.lineWidth = .38 + membrane * .34 + ingestGate * .52;
         ctx.shadowColor = "rgba(10,7,6,.14)";
-        ctx.shadowBlur = 1.0 + ingestGate * 2.2 + digestGate * 1.1;
+        ctx.shadowBlur = 1.0 + ingestGate * 2.6 + digestGate * 1.2;
         ctx.stroke();
         ctx.restore();
 
         for (const fragment of stream.fragments) {
-          const raw = (time * stream.speed * (.58 + ingestGate * .54) * motionFactor + stream.phase + fragment.offset + ingestGate * .070 + digestGate * .014) % 1;
+          const raw = (time * stream.speed * (.60 + ingestGate * .62) * motionFactor + stream.phase + fragment.offset + ingestGate * .086 + digestGate * .014) % 1;
           const t = Math.pow(raw, .90 - ingestGate * .13);
           const x = cubic(stream.x0, stream.x1 + flex, stream.x2 - flex * .55, stream.x3, t);
           const y = cubic(stream.y0, stream.y1 - flex * .35, stream.y2 + flex * .42, stream.y3, t);
@@ -3268,10 +3530,10 @@ th {
           ctx.save();
           ctx.translate(x + normalX * side, y + normalY * side);
           ctx.rotate(angle + fragment.rot * (1 - swallowed * .66));
-          ctx.globalAlpha = clamp(fragment.alpha * (1 - swallowed * .40) + ingestGate * .100 + digestGate * .030 + breath * .008, .032, .34);
+          ctx.globalAlpha = clamp(fragment.alpha * (1 - swallowed * .40) + ingestGate * .118 + digestGate * .032 + breath * .008, .032, .36);
           ctx.fillStyle = fragment.char.length > 1 ? "rgba(45,39,32,.28)" : "rgba(24,21,18,.32)";
           ctx.shadowColor = "rgba(18,12,10,.18)";
-          ctx.shadowBlur = .7 + swallowed * 2.6 + ingestGate * 2.0 + digestGate * .9;
+          ctx.shadowBlur = .7 + swallowed * 2.6 + ingestGate * 2.35 + digestGate * .95;
           ctx.font = `${fragment.char.length > 3 ? 480 : 560} ${fragment.size * (fragment.char.length > 3 ? .72 : .92) * (1 - swallowed * .16)}px "Times New Roman", Times, serif`;
           ctx.fillText(fragment.char, 0, 0);
           ctx.restore();
@@ -3285,7 +3547,7 @@ th {
         if (!isCurveVisible(fragment, 150)) continue;
         const ingestGate = Math.pow(currentBreath.ingest, 1.12);
         const digestGate = Math.pow(currentBreath.digest, 1.15);
-        const flow = (time * fragment.speed * (.72 + ingestGate * .55) * motionFactor + fragment.phase + digestGate * .030) % 1;
+        const flow = (time * fragment.speed * (.72 + ingestGate * .55) * motionFactor + fragment.phase + digestGate * .046) % 1;
         const t = Math.pow(flow, .91 - ingestGate * .08);
         const x = cubic(fragment.x0, fragment.x1, fragment.x2, fragment.x3, t);
         const y = cubic(fragment.y0, fragment.y1, fragment.y2, fragment.y3, t);
@@ -3298,10 +3560,10 @@ th {
         ctx.save();
         ctx.translate(x + Math.sin(angle + Math.PI / 2) * side, y - Math.cos(angle + Math.PI / 2) * side * .55);
         ctx.rotate(angle + fragment.rot * (1 - digestion * .60) + Math.sin(time * .00014 * motionFactor + fragment.phase) * .034 * motionFactor);
-        ctx.globalAlpha = clamp(fragment.alpha * (1 - digestion * .45) + ingestGate * .045 + digestGate * .052 + breath * .007, .035, .26);
+        ctx.globalAlpha = clamp(fragment.alpha * (1 - digestion * .45) + ingestGate * .045 + digestGate * .066 + breath * .007, .035, .28);
         ctx.fillStyle = fragment.char.length > 1 ? "rgba(45,39,32,.25)" : "rgba(24,21,18,.31)";
         ctx.shadowColor = "rgba(22,17,14,.14)";
-        ctx.shadowBlur = .6 + digestion * 2.1 + digestGate * 1.1;
+        ctx.shadowBlur = .6 + digestion * 2.1 + digestGate * 1.35;
         ctx.font = `${fragment.char.length > 1 ? 470 : 540} ${fragment.size * (1 - digestion * .22) * (fragment.char.length > 3 ? .72 : 1)}px "Times New Roman", Times, serif`;
         ctx.fillText(fragment.char, 0, 0);
         ctx.restore();
@@ -3414,12 +3676,13 @@ th {
       if (!body) return;
       const glyphList = ["[12]", "DOI", "et al.", "pp.", "Q1", "SSCI", "h-index", "0", "1", "[", "]", "."];
       const start = performance.now();
-      const count = 4 + Math.floor(Math.random() * 4);
+      const count = 5 + Math.floor(Math.random() * 4);
       for (let i = 0; i < count; i++) {
-        const sx = x + (Math.random() - .5) * 10;
-        const sy = y + (Math.random() - .5) * 9;
-        const angle = Math.atan2(sy - y, sx - x) + (Math.random() - .5) * 1.15;
-        const dist = 7 + Math.random() * 15;
+        const base = Math.random() * Math.PI * 2;
+        const sx = x + Math.cos(base) * (3 + Math.random() * 7);
+        const sy = y + Math.sin(base) * (2 + Math.random() * 6);
+        const angle = base + (Math.random() - .5) * .72;
+        const dist = 9 + Math.random() * 17;
         instantBursts.push({
           x0: sx,
           y0: sy,
@@ -3431,9 +3694,9 @@ th {
           y3: sy + Math.sin(angle) * dist * .72,
           char: glyphList[Math.floor(Math.random() * glyphList.length)],
           start,
-          duration: 620 + Math.random() * 420,
-          alpha: .060 + Math.random() * .082,
-          size: 1.45 + Math.random() * 1.85,
+          duration: 760 + Math.random() * 520,
+          alpha: .070 + Math.random() * .086,
+          size: 1.35 + Math.random() * 1.70,
           rot: (Math.random() - .5) * Math.PI,
           spin: (Math.random() - .5) * .38
         });
@@ -3521,17 +3784,17 @@ th {
     }
 
     function drawTouchResponse(time) {
-      const strength = clamp(pointer.tapHeat * .48 + pointer.pressHeat * .68 + pointer.longSignalHeat * .44 + pointer.releaseHeat * .22, 0, 1);
+      const strength = clamp(pointer.tapHeat * .56 + pointer.pressHeat * .68 + pointer.wetHeat * .18 + pointer.longSignalHeat * .42 + pointer.releaseHeat * .20, 0, 1);
       if (strength < .025) return;
 
       const x = pointer.touchX || body.x;
       const y = pointer.touchY || body.y;
       const hold = pointer.downActive && pointer.longPress ? .34 : 0;
-      const radius = body.rx * (.095 + strength * .115 + hold * .060);
+      const radius = body.rx * (.090 + strength * .128 + hold * .055);
       const wet = ctx.createRadialGradient(x, y, 0, x, y, radius);
-      wet.addColorStop(0, `rgba(10, 7, 6, ${.060 + strength * .155 + hold * .105})`);
-      wet.addColorStop(.36, `rgba(43, 30, 26, ${.040 + strength * .090})`);
-      wet.addColorStop(.72, `rgba(82, 72, 45, ${.018 + strength * .040})`);
+      wet.addColorStop(0, `rgba(10, 7, 6, ${.066 + strength * .172 + hold * .095})`);
+      wet.addColorStop(.36, `rgba(43, 30, 26, ${.044 + strength * .098})`);
+      wet.addColorStop(.72, `rgba(82, 72, 45, ${.020 + strength * .046})`);
       wet.addColorStop(1, "rgba(0,0,0,0)");
 
       ctx.save();
@@ -3627,14 +3890,14 @@ th {
         const touchDx = (hole.x - (pointer.touchX || body.x)) / (body.rx * .36);
         const touchDy = (hole.y - (pointer.touchY || body.y)) / (body.ry * .30);
         const touchLocality = clamp(1 - touchDx * touchDx - touchDy * touchDy, 0, 1);
-        const touchDark = touchLocality * (pointer.pressHeat * .42 + pointer.tapHeat * .18 + pointer.longSignalHeat * .16 + organTouchPulse * .22);
+        const touchDark = touchLocality * (pointer.pressHeat * .46 + pointer.tapHeat * .26 + pointer.wetHeat * .10 + pointer.longSignalHeat * .14 + organTouchPulse * .26);
         const ingestGate = Math.pow(currentBreath.ingest, 1.10);
         const digestGate = Math.pow(currentBreath.digest, 1.16);
         const expelGate = Math.pow(currentBreath.expel, 1.10);
-        const metabolicDark = primary * (digestGate * .70 + ingestGate * .16 + currentBreath.organ * .08 + expelGate * .04) + keyBreath * .10 + keyHole * openingLife * .11;
+        const metabolicDark = primary * (digestGate * .82 + ingestGate * .20 + currentBreath.organ * .08 + expelGate * .04) + keyBreath * .10 + keyHole * openingLife * .11;
         const count = Math.round(12 + (hole.rx + hole.ry) * (.36 + primary * .10 + keyHole * .035));
         if (keyHole) {
-          const cavityBreath = clamp(.17 + holeBreath * .18 + keyBreath * .25 + metabolicDark * .58 + digestGate * .18 * keyHole, 0, .92);
+          const cavityBreath = clamp(.17 + holeBreath * .18 + keyBreath * .25 + metabolicDark * .64 + digestGate * .24 * keyHole, 0, .94);
           ctx.save();
           ctx.translate(hole.x, hole.y);
           ctx.rotate(Math.sin(time * .000095 + hole.phase) * .045 + (hole.primaryOrder || 0) * .18);
@@ -3643,13 +3906,13 @@ th {
             -hole.rx * .18, -hole.ry * .18, 0,
             0, 0, Math.max(hole.rx, hole.ry) * 1.34
           );
-          wet.addColorStop(0, `rgba(10,7,6,${.16 + cavityBreath * .24 + digestGate * .045})`);
-          wet.addColorStop(.36, `rgba(40,28,27,${.08 + cavityBreath * .14 + digestGate * .030})`);
+          wet.addColorStop(0, `rgba(10,7,6,${.16 + cavityBreath * .25 + digestGate * .060})`);
+          wet.addColorStop(.36, `rgba(40,28,27,${.08 + cavityBreath * .15 + digestGate * .038})`);
           wet.addColorStop(.68, `rgba(112,88,73,${.028 + cavityBreath * .050 + ingestGate * .012})`);
           wet.addColorStop(1, "rgba(0,0,0,0)");
           ctx.fillStyle = wet;
           ctx.shadowColor = "rgba(10,6,5,.25)";
-          ctx.shadowBlur = 2.2 + cavityBreath * 4.5 + digestGate * 2.1;
+          ctx.shadowBlur = 2.2 + cavityBreath * 4.8 + digestGate * 2.6;
           ctx.beginPath();
           ctx.ellipse(0, 0, hole.rx * (1.12 + keyBreath * .045), hole.ry * (1.06 + holeBreath * .050), 0, 0, Math.PI * 2);
           ctx.fill();
@@ -3731,7 +3994,10 @@ th {
       updateLongPressAbsorption(time);
       const activity = 1 - scrollSettle * .58;
       currentBreath = getBreathState(time, activity);
-      const upperPlumeTarget = clamp(.36 + currentBreath.ingest * .34 + currentBreath.digest * .08 + currentBreath.organ * .08 + currentBreath.membrane * .05 - currentBreath.expel * .06 - scrollSettle * .20, .30, .82);
+      const referenceWasteTarget = clamp(currentBreath.expel * .78 + currentBreath.digest * .16 - scrollSettle * .20, 0, .88);
+      referenceWasteHeat += (referenceWasteTarget - referenceWasteHeat) * .075;
+      if (referencesLayer) referencesLayer.style.setProperty("--ref-waste", referenceWasteHeat.toFixed(3));
+      const upperPlumeTarget = clamp(.36 + currentBreath.ingest * .42 + currentBreath.digest * .08 + currentBreath.organ * .08 + currentBreath.membrane * .05 - currentBreath.expel * .10 - scrollSettle * .20, .30, .84);
       upperPlumeDensity += (upperPlumeTarget - upperPlumeDensity) * .055;
       const startupEase = getStartupEase(time);
       const startupLife = 1 - startupEase;
@@ -3748,8 +4014,8 @@ th {
         const tetherY = Math.cos(time * .011) * shudder * .11;
         const tetherR = Math.sin(time * .010) * shudder * .026;
         organism.style.setProperty("--organ-reflex", touchReflex.toFixed(3));
-        organism.style.setProperty("--touch-wet-a", (pointer.wetHeat * .38 + currentBreath.membrane * .055 + currentBreath.digest * .030 + openingLife * .072 + organTouchPulse * .030).toFixed(3));
-        organism.style.setProperty("--touch-wet-b", (pointer.wetHeat * .28 + currentBreath.membrane * .042 + currentBreath.digest * .022 + openingLife * .052 + organTouchPulse * .022).toFixed(3));
+        organism.style.setProperty("--touch-wet-a", (pointer.wetHeat * .40 + currentBreath.membrane * .055 + currentBreath.digest * .030 + openingLife * .072 + organTouchPulse * .045).toFixed(3));
+        organism.style.setProperty("--touch-wet-b", (pointer.wetHeat * .30 + currentBreath.membrane * .042 + currentBreath.digest * .022 + openingLife * .052 + organTouchPulse * .033).toFixed(3));
         organism.style.setProperty("--organ-jitter-x", `${tetherX.toFixed(3)}px`);
         organism.style.setProperty("--organ-jitter-y", `${tetherY.toFixed(3)}px`);
         organism.style.setProperty("--organ-jitter-r", `${tetherR.toFixed(4)}deg`);
@@ -3804,7 +4070,9 @@ th {
       if (drawPriorityBackground && (!interactionPriority || frameToggle % 2 === 0)) drawMutationSheets(time, breath);
       if (drawPriorityDetail) drawContactScars(time, breath);
       if (drawPriorityDetail) drawEdgeCrumbs(time, breath);
+      if (drawPriorityDetail) drawEdgeFusionDust(time, breath);
       drawExpelledWaste(time, breath, interactionLoadShed);
+      if (drawPriorityReferences) drawReferenceSediment(time, breath, interactionLoadShed);
       if (drawPriorityReferences) drawLowerRightResidue(time, breath);
       if (!scrolling && (!interactionLoadShed || frameToggle % 2 === 0)) drawLifeMotes(time, breath);
       drawClotMass(time, breath, heat);
@@ -3820,12 +4088,12 @@ th {
         const local = tierTime * (.000025 + startupEase * .000036) * Math.max(motionFactor, .18) + particle.phase;
         const motionGate = (.16 + startupEase * .40) * motionFactor;
         const syncBreath = particle.activityTier === "still" ? 0 : (breath * .38 + currentBreath.organ * .62);
+        const rawX = particle.x + Math.cos(local) * particle.amp * .022 * motionGate;
+        const rawY = particle.y + Math.sin(local * .75) * particle.amp * .022 * motionGate;
+        const coupled = bodyMotionCoupling(rawX, rawY, .24);
         ctx.save();
-        ctx.translate(
-          particle.x + Math.cos(local) * particle.amp * .022 * motionGate,
-          particle.y + Math.sin(local * .75) * particle.amp * .022 * motionGate
-        );
-        ctx.rotate(particle.rot + Math.sin(local) * .010 * motionGate);
+        ctx.translate(coupled.x, coupled.y);
+        ctx.rotate(particle.rot + Math.sin(local) * .010 * motionGate + coupled.rot * .45);
         ctx.globalAlpha = .105 + syncBreath * .034;
         ctx.fillStyle = particle.color;
         ctx.font = `560 ${particle.size}px "Times New Roman", Times, serif`;
