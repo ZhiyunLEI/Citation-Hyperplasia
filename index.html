@@ -5,6 +5,14 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Citation Hyperplasia — Performance Preview</title>
 <link rel="manifest" href="manifest.webmanifest">
+<script>
+  (() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("freeze") || params.get("diag") === "static") {
+      document.documentElement.classList.add("freeze-requested");
+    }
+  })();
+</script>
 <style>
 :root {
   --paper-width: 990px;
@@ -49,6 +57,11 @@ body.is-warming .stage {
   opacity: 0;
 }
 
+html.freeze-requested body.is-warming .stage,
+body.is-animation-frozen .stage {
+  opacity: 1;
+}
+
 .paper {
   width: var(--paper-width);
   min-height: 2380px;
@@ -66,6 +79,10 @@ body.is-warming .stage {
   user-select: none;
 }
 
+.paper.is-over-organ {
+  cursor: cell;
+}
+
 .lesion-canvas {
   position: absolute;
   inset: 0;
@@ -75,30 +92,6 @@ body.is-warming .stage {
   pointer-events: none;
   mix-blend-mode: multiply;
   opacity: .72;
-}
-
-.fusion-field {
-  position: absolute;
-  inset: 0;
-  z-index: 8;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  object-fit: fill;
-  mix-blend-mode: multiply;
-  opacity: .34;
-  filter: contrast(1.02) saturate(.82) brightness(1.04);
-  user-select: none;
-  -webkit-user-drag: none;
-}
-
-body.is-mobile-profile .fusion-field {
-  opacity: .84;
-  filter: contrast(1.04) saturate(.80) brightness(1.03);
-}
-
-body.is-mobile-profile .lesion-canvas {
-  opacity: .50;
 }
 
 .interaction-canvas {
@@ -144,7 +137,12 @@ body.is-mobile-profile .lesion-canvas {
 }
 
 .interactive-object.is-visible {
-  animation: interactive-object-life 8s cubic-bezier(.22, .62, .20, 1) both;
+  animation: interactive-object-life var(--interactive-duration, 2.8s) cubic-bezier(.22, .62, .20, 1) both;
+}
+
+.interactive-object.is-visible.is-incubating {
+  animation-name: interactive-object-incubate;
+  animation-duration: var(--interactive-duration, 10s);
 }
 
 @keyframes interactive-object-life {
@@ -163,6 +161,29 @@ body.is-mobile-profile .lesion-canvas {
   100% {
     opacity: 0;
     transform: translate(-50%, -50%) scale(1.07);
+  }
+}
+
+@keyframes interactive-object-incubate {
+  0% {
+    opacity: .34;
+    transform: translate(-50%, -50%) scale(.92);
+  }
+  64% {
+    opacity: .56;
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+  88% {
+    opacity: .62;
+    transform: translate(-50%, -50%) scale(1.31);
+  }
+  96% {
+    opacity: .46;
+    transform: translate(-50%, -50%) scale(1.38);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.18);
   }
 }
 
@@ -194,6 +215,7 @@ body.is-mobile-profile .lesion-canvas {
   transform-origin: 66% 48%;
   mix-blend-mode: multiply;
   filter: saturate(.82) contrast(1.05) brightness(1.02);
+  transform: translate(var(--organ-jitter-x, 0px), var(--organ-jitter-y, 0px)) rotate(var(--organ-jitter-r, 0deg));
   scale: calc(1 + var(--organ-reflex, 0) * .0032);
   transition: scale 1800ms cubic-bezier(.16, .72, .20, 1);
 }
@@ -249,9 +271,9 @@ body.is-mobile-profile .lesion-canvas {
 }
 
 .lesion-depth {
-  width: 58%;
-  left: 39.2%;
-  top: 1%;
+  width: 53.544%;
+  left: 41.428%;
+  top: 1.422%;
   opacity: .74;
   filter: blur(.55px) contrast(.94) saturate(.70) brightness(1.18);
   animation: lesion-depth-breathe 34s ease-in-out infinite;
@@ -292,9 +314,9 @@ body.is-mobile-profile .lesion-canvas {
 }
 
 .lesion-debris {
-  width: 68%;
-  left: 32.7%;
-  top: -3.8%;
+  width: 61.846%;
+  left: 36.773%;
+  top: -3.036%;
   opacity: .54;
   filter: contrast(.78) saturate(.44) brightness(1.42);
   animation: lesion-debris-drift 48s ease-in-out infinite;
@@ -302,9 +324,9 @@ body.is-mobile-profile .lesion-canvas {
 }
 
 .lesion-dust {
-  width: 82%;
-  left: 21.8%;
-  top: -9%;
+  width: 78.669%;
+  left: 24.170%;
+  top: -8.805%;
   opacity: .155;
   filter: contrast(.70) saturate(.36) brightness(1.32);
   mix-blend-mode: multiply;
@@ -388,38 +410,46 @@ body.is-mobile-profile .lesion-canvas {
   animation: release-stress-drain 2600ms ease-out both;
 }
 
-.paper.is-interacting .lesion-layer,
 .paper.is-scrolling .lesion-layer {
   animation-play-state: paused;
+}
+
+html.freeze-requested .lesion-layer,
+html.freeze-requested .lesion-organism::before,
+html.freeze-requested .lesion-organism::after,
+body.is-animation-frozen .lesion-layer,
+body.is-animation-frozen .lesion-organism::before,
+body.is-animation-frozen .lesion-organism::after {
+  animation-play-state: paused !important;
 }
 
 
 @keyframes lesion-core-breathe {
   0%, 100% {
-    transform: translate(0, 0) scale(1) rotate(-1deg);
+    transform: translate(0, 0) translate(var(--core-jx, 0px), var(--core-jy, 0px)) scale(1) rotate(calc(-1deg + var(--core-jr, 0deg)));
     filter: contrast(1.02) saturate(.94) brightness(1.055) drop-shadow(0 10px 15px rgba(24, 18, 14, .17));
   }
   38% {
-    transform: translate(-.42%, .25%) scale(1.022) rotate(-.16deg);
+    transform: translate(-.42%, .25%) translate(var(--core-jx, 0px), var(--core-jy, 0px)) scale(1.022) rotate(calc(-.16deg + var(--core-jr, 0deg)));
     filter: contrast(1.055) saturate(.965) brightness(1.035) drop-shadow(0 13px 19px rgba(19, 12, 9, .22));
   }
   62% {
-    transform: translate(-.56%, .34%) scale(1.031) rotate(.22deg);
+    transform: translate(-.56%, .34%) translate(var(--core-jx, 0px), var(--core-jy, 0px)) scale(1.031) rotate(calc(.22deg + var(--core-jr, 0deg)));
     filter: contrast(1.075) saturate(.99) brightness(1.020) drop-shadow(0 15px 22px rgba(18, 11, 8, .25));
   }
 }
 
 @keyframes lesion-membrane-breathe {
   0%, 100% {
-    transform: translate(.2%, -.2%) scale(.998) rotate(.4deg);
+    transform: translate(.2%, -.2%) translate(var(--membrane-jx, 0px), var(--membrane-jy, 0px)) scale(.998) rotate(calc(.4deg + var(--membrane-jr, 0deg)));
     opacity: .50;
   }
   45% {
-    transform: translate(-.25%, .20%) scale(1.014) rotate(-.16deg);
+    transform: translate(-.25%, .20%) translate(var(--membrane-jx, 0px), var(--membrane-jy, 0px)) scale(1.014) rotate(calc(-.16deg + var(--membrane-jr, 0deg)));
     opacity: .62;
   }
   68% {
-    transform: translate(-.38%, .30%) scale(1.023) rotate(-.24deg);
+    transform: translate(-.38%, .30%) translate(var(--membrane-jx, 0px), var(--membrane-jy, 0px)) scale(1.023) rotate(calc(-.24deg + var(--membrane-jr, 0deg)));
     opacity: .69;
   }
 }
@@ -437,11 +467,11 @@ body.is-mobile-profile .lesion-canvas {
 
 @keyframes lesion-tendril-breathe {
   0%, 100% {
-    transform: translate(0, 0) scale(1);
+    transform: translate(0, 0) translate(var(--tendril-jx, 0px), var(--tendril-jy, 0px)) scale(1) rotate(var(--tendril-jr, 0deg));
     opacity: .40;
   }
   52% {
-    transform: translate(.055%, .035%) scale(1.001);
+    transform: translate(.055%, .035%) translate(var(--tendril-jx, 0px), var(--tendril-jy, 0px)) scale(1.001) rotate(var(--tendril-jr, 0deg));
     opacity: .52;
   }
 }
@@ -1053,18 +1083,17 @@ th {
 <div class="stage">
 <main class="paper">
 <canvas class="lesion-canvas" id="lesionCanvas" aria-hidden="true"></canvas>
-<img class="fusion-field" src="assets/fusion-baked/fusion_typographic_field.webp" alt="" aria-hidden="true">
 <canvas class="interaction-canvas" id="interactionCanvas" aria-hidden="true"></canvas>
 <div class="interactive-object" id="interactiveObject" aria-hidden="true">
-  <img class="interactive-object-img" id="interactiveObjectImg" data-lesion-asset="lesion_interactive_objects.webp" src="assets/lesions-mobile/lesion_interactive_objects.webp" alt="">
+  <img class="interactive-object-img" id="interactiveObjectImg" data-lesion-asset="lesion_interactive_objects.webp" src="assets/lesions-opt/lesion_interactive_objects.webp" alt="">
 </div>
 <div class="lesion-organism" aria-hidden="true">
-  <img class="lesion-layer lesion-depth" data-lesion-asset="lesion_depth_shadow.webp" src="assets/lesions-mobile/lesion_depth_shadow.webp" alt="">
-  <img class="lesion-layer lesion-tendrils" data-lesion-asset="lesion_tendrils.webp" src="assets/lesions-mobile/lesion_tendrils.webp" alt="">
-  <img class="lesion-layer lesion-debris" data-lesion-asset="lesion_edge_debris.webp" src="assets/lesions-mobile/lesion_edge_debris.webp" alt="">
-  <img class="lesion-layer lesion-dust" data-lesion-asset="lesion_micro_citation_dust.webp" src="assets/lesions-mobile/lesion_micro_citation_dust.webp" alt="">
-  <img class="lesion-layer lesion-core" data-lesion-asset="lesion_core_main.webp" src="assets/lesions-mobile/lesion_core_main.webp" alt="">
-  <img class="lesion-layer lesion-membrane" data-lesion-asset="lesion_membrane_overlay.webp" src="assets/lesions-mobile/lesion_membrane_overlay.webp" alt="">
+  <img class="lesion-layer lesion-depth" data-lesion-asset="lesion_depth_shadow_lite.webp" src="assets/lesions-opt/lesion_depth_shadow_lite.webp" alt="">
+  <img class="lesion-layer lesion-tendrils" data-lesion-asset="lesion_tendrils.webp" src="assets/lesions-opt/lesion_tendrils.webp" alt="">
+  <img class="lesion-layer lesion-debris" data-lesion-asset="lesion_edge_debris_lite.webp" src="assets/lesions-opt/lesion_edge_debris_lite.webp" alt="">
+  <img class="lesion-layer lesion-dust" data-lesion-asset="lesion_micro_citation_dust_lite.webp" src="assets/lesions-opt/lesion_micro_citation_dust_lite.webp" alt="">
+  <img class="lesion-layer lesion-core" data-lesion-asset="lesion_core_main.webp" src="assets/lesions-opt/lesion_core_main.webp" alt="">
+  <img class="lesion-layer lesion-membrane" data-lesion-asset="lesion_membrane_overlay.webp" src="assets/lesions-opt/lesion_membrane_overlay.webp" alt="">
 </div>
 <div class="interaction-stress" aria-hidden="true"></div>
 
@@ -1424,6 +1453,9 @@ th {
     const interactiveObject = document.getElementById("interactiveObject");
     const interactiveObjectImg = document.getElementById("interactiveObjectImg");
     const organism = document.querySelector(".lesion-organism");
+    const lesionCoreLayer = document.querySelector(".lesion-core");
+    const lesionMembraneLayer = document.querySelector(".lesion-membrane");
+    const lesionTendrilLayer = document.querySelector(".lesion-tendrils");
     if (!paper || !canvas || !interactionCanvas) return;
 
     const rng = mulberry32(seed);
@@ -1462,7 +1494,7 @@ th {
     let instantFrameRunning = false;
     let instantFrameLast = 0;
     let anchors = [];
-    let pointer = { x: 0, y: 0, active: false, heat: 0, tapHeat: 0, pressHeat: 0, wetHeat: 0, longSignalHeat: 0, down: false, downActive: false, downStrength: 0, releaseHeat: 0, pointerId: null, longPress: false, downAt: 0, touchX: 0, touchY: 0, immediateTouch: false };
+    let pointer = { x: 0, y: 0, active: false, zone: "none", heat: 0, tapHeat: 0, pressHeat: 0, wetHeat: 0, longSignalHeat: 0, down: false, downActive: false, downStrength: 0, releaseHeat: 0, pointerId: null, longPress: false, downAt: 0, touchX: 0, touchY: 0, immediateTouch: false };
     let pressTimer = 0;
     let stressTimer = 0;
     let consumeTimer = 0;
@@ -1473,14 +1505,18 @@ th {
     let frameToggle = 0;
     let lastBurstAt = 0;
     let lastHoldAbsorbAt = 0;
+    let lastOrganPulseAt = 0;
+    let lastOrganHoverAt = 0;
     let interactionPriorityUntil = 0;
+    let interactionLoadShedUntil = 0;
+    let lastPointerFinishAt = 0;
     let interactiveObjectActive = false;
     let interactiveObjectTimer = 0;
     let imprintFrameRunning = false;
     const imprintState = {
       active: false,
       start: 0,
-      duration: 8000,
+      duration: 2800,
       x: 0,
       y: 0,
       size: 0,
@@ -1489,7 +1525,9 @@ th {
       phaseB: 0,
       phaseC: 0,
       nextSeepAt: 0,
-      seepBursts: 0
+      seepBursts: 0,
+      incubating: false,
+      collapsed: false
     };
     const ART_WIDTH = 990;
     const ART_HEIGHT = 2380;
@@ -1502,6 +1540,7 @@ th {
     let upperPlumeDensity = .52;
     let organReflex = 0;
     let organTouchPulse = 0;
+    let organShudderHeat = 0;
     let animationStartedAt = 0;
     const canvasDprCap = 1;
     const idleFrameMs = 50;
@@ -1514,11 +1553,15 @@ th {
     let animatedDomSpanCount = 0;
     const urlParams = new URLSearchParams(window.location.search);
     const debugMode = urlParams.has("debug");
+    const freezeAnimation = urlParams.has("freeze") || urlParams.get("diag") === "static";
+    const frozenVisualTime = Number.parseFloat(urlParams.get("freezeTime") || "9600");
+    document.body.classList.toggle("is-animation-frozen", freezeAnimation);
+    if (freezeAnimation) revealStage();
     const lesionAssetNames = [
-      "lesion_depth_shadow.webp",
+      "lesion_depth_shadow_lite.webp",
       "lesion_tendrils.webp",
-      "lesion_edge_debris.webp",
-      "lesion_micro_citation_dust.webp",
+      "lesion_edge_debris_lite.webp",
+      "lesion_micro_citation_dust_lite.webp",
       "lesion_core_main.webp",
       "lesion_membrane_overlay.webp",
       "lesion_interactive_objects.webp"
@@ -1546,41 +1589,20 @@ th {
       document.body.appendChild(perfHud);
     }
 
-    function shouldUseMobileAssets() {
-      if (urlParams.has("hires")) return false;
-      if (urlParams.has("mobile")) return true;
-      const coarsePointer = window.matchMedia && window.matchMedia("(pointer: coarse)").matches;
-      const narrowScreen = Math.min(window.innerWidth || 0, window.innerHeight || 0) <= 900;
-      const touchDevice = navigator.maxTouchPoints && navigator.maxTouchPoints > 1;
-      return coarsePointer || touchDevice || narrowScreen;
-    }
-
     function lesionAssetBase() {
-      return shouldUseMobileAssets() ? "assets/lesions-mobile" : "assets/lesions-opt";
+      return "assets/lesions-opt";
     }
 
-    const stableIpadParticleMode = shouldUseMobileAssets() && !urlParams.has("fullmotion");
-
-    function hashUnit(value) {
-      const raw = Math.sin(value * 12.9898 + seed * .00017) * 43758.5453;
-      return raw - Math.floor(raw);
+    function particleMotionFactor() {
+      return 1;
     }
 
-    function particleMotionFactor(particle, emphasis = 0) {
-      if (!stableIpadParticleMode) return 1;
-      const roll = hashUnit((particle.phase || 0) + (particle.x || 0) * .013 + (particle.y || 0) * .017);
-      if (roll > .88) return .30 + emphasis * .18;
-      if (roll > .76) return .16 + emphasis * .10;
-      return .035 + emphasis * .045;
-    }
-
-    function connectorMotionFactor(emphasis = 0) {
-      return stableIpadParticleMode ? (.28 + emphasis * .16) : 1;
+    function connectorMotionFactor() {
+      return 1;
     }
 
     function applyLesionAssetProfile() {
       const base = lesionAssetBase();
-      document.body.classList.toggle("is-mobile-profile", shouldUseMobileAssets());
       document.querySelectorAll("[data-lesion-asset]").forEach((img) => {
         const name = img.getAttribute("data-lesion-asset");
         if (!name) return;
@@ -1655,8 +1677,33 @@ th {
         bounds.top <= viewBounds.bottom + margin;
     }
 
-    function markInteractionPriority(duration = 950) {
-      interactionPriorityUntil = Math.max(interactionPriorityUntil, performance.now() + duration);
+    function markInteractionPriority(duration = 950, loadShedDuration = Math.max(duration, 1450)) {
+      const now = performance.now();
+      interactionPriorityUntil = Math.max(interactionPriorityUntil, now + duration);
+      interactionLoadShedUntil = Math.max(interactionLoadShedUntil, now + loadShedDuration);
+    }
+
+    function isPriorityParticleZone(x, y) {
+      if (!body) return true;
+      const touchX = pointer.touchX || pointer.x || body.x;
+      const touchY = pointer.touchY || pointer.y || body.y;
+      const bodyDx = (x - body.x) / (body.rx * 1.86);
+      const bodyDy = (y - body.y) / (body.ry * 1.68);
+      const touchDx = (x - touchX) / (body.rx * .98);
+      const touchDy = (y - touchY) / (body.ry * .88);
+      const nearBody = bodyDx * bodyDx + bodyDy * bodyDy < 2.05;
+      const nearTouch = touchDx * touchDx + touchDy * touchDy < 1.25;
+      const ingestCorridor =
+        y > body.y - body.ry * 1.92 &&
+        y < body.y + body.ry * .28 &&
+        x > body.x - body.rx * 1.25 &&
+        x < body.x + body.rx * 1.72;
+      const expelCorridor =
+        y > body.y + body.ry * .20 &&
+        y < body.y + body.ry * 1.72 &&
+        x > body.x - body.rx * 1.62 &&
+        x < body.x + body.rx * 1.58;
+      return nearBody || nearTouch || ingestCorridor || expelCorridor;
     }
 
     function revealStage() {
@@ -1722,7 +1769,7 @@ th {
     async function runExhibitionWarmup() {
       try {
         registerExhibitionCache();
-        const timeoutMs = shouldUseMobileAssets() ? 2200 : 4200;
+        const timeoutMs = 4200;
         const timeout = new Promise((resolve) => window.setTimeout(resolve, timeoutMs));
         const work = (async () => {
           await preloadAndDecodeAssets();
@@ -1737,13 +1784,15 @@ th {
       }
     }
 
-    function showInteractiveObject(x, y) {
+    function showInteractiveObject(x, y, options = {}) {
       if (!interactiveObject || !body || interactiveObjectActive) return false;
       const now = performance.now();
+      const duration = options.duration || (options.incubating ? 10000 : 2800);
+      const incubating = Boolean(options.incubating);
       interactiveObjectActive = true;
       if (interactiveObjectTimer) window.clearTimeout(interactiveObjectTimer);
 
-      const size = clamp(body.rx * .56, 92, 128);
+      const size = clamp(body.rx * (incubating ? .58 : .54), 88, incubating ? 132 : 124);
       const baseRot = ((x / Math.max(1, width)) - .5) * 16;
       pointer.touchX = x;
       pointer.touchY = y;
@@ -1751,13 +1800,15 @@ th {
       interactiveObject.style.setProperty("--interactive-y", `${y.toFixed(1)}px`);
       interactiveObject.style.setProperty("--interactive-size", `${size.toFixed(1)}px`);
       interactiveObject.style.setProperty("--interactive-rot", `${baseRot.toFixed(2)}deg`);
-      interactiveObject.classList.remove("is-visible");
+      interactiveObject.style.setProperty("--interactive-duration", `${duration}ms`);
+      interactiveObject.classList.remove("is-visible", "is-incubating");
       void interactiveObject.offsetWidth;
+      if (incubating) interactiveObject.classList.add("is-incubating");
       interactiveObject.classList.add("is-visible");
 
       imprintState.active = true;
       imprintState.start = now;
-      imprintState.duration = 8000;
+      imprintState.duration = duration;
       imprintState.x = x;
       imprintState.y = y;
       imprintState.size = size;
@@ -1767,19 +1818,23 @@ th {
       imprintState.phaseC = Math.random() * Math.PI * 2;
       imprintState.nextSeepAt = now + 520 + Math.random() * 1050;
       imprintState.seepBursts = 0;
+      imprintState.incubating = incubating;
+      imprintState.collapsed = false;
       startImprintFrame();
 
       interactiveObjectTimer = window.setTimeout(() => {
         clearInteractiveObject();
-      }, 8100);
+      }, duration + 120);
       triggerImprintOrganResponse(x, y);
       return true;
     }
 
     function clearInteractiveObject() {
-      interactiveObject.classList.remove("is-visible");
+      interactiveObject.classList.remove("is-visible", "is-incubating");
       interactiveObjectActive = false;
       imprintState.active = false;
+      imprintState.incubating = false;
+      imprintState.collapsed = false;
       if (interactiveObjectImg) {
         interactiveObjectImg.style.transform = `rotate(${imprintState.baseRot.toFixed(2)}deg) scale(1)`;
         interactiveObjectImg.style.filter = "contrast(.94) saturate(.76) brightness(1.05)";
@@ -1805,21 +1860,28 @@ th {
         Math.sin(time * .00235 + imprintState.phaseC) * .13;
       const deepWet = .5 + Math.sin(time * .00105 + imprintState.phaseC) * .24 +
         Math.sin(time * .00048 + imprintState.phaseB) * .14;
-      const lateQuiet = 1 - Math.pow(progress, 1.8) * .36;
-      const microScale = 1 + living * .026 * lateQuiet + Math.sin(time * .00062 + imprintState.phaseB) * .010;
-      const microRot = imprintState.baseRot + living * .82 + Math.sin(time * .0012 + imprintState.phaseC) * .22;
+      const lateQuiet = 1 - Math.pow(progress, 1.8) * (imprintState.incubating ? .18 : .36);
+      const incubationLift = imprintState.incubating ? Math.pow(progress, 1.18) * .060 : 0;
+      const microScale = 1 + incubationLift + living * (imprintState.incubating ? .038 : .026) * lateQuiet + Math.sin(time * .00062 + imprintState.phaseB) * (imprintState.incubating ? .016 : .010);
+      const microRot = imprintState.baseRot + living * (imprintState.incubating ? 1.34 : .82) + Math.sin(time * .0012 + imprintState.phaseC) * (imprintState.incubating ? .34 : .22);
       const wet = clamp(deepWet, 0, 1);
-      const contrast = .92 + wet * .16;
-      const saturation = .68 + wet * .20;
-      const brightness = 1.08 - wet * .10;
+      const contrast = .92 + wet * (imprintState.incubating ? .23 : .16);
+      const saturation = .68 + wet * (imprintState.incubating ? .28 : .20);
+      const brightness = 1.08 - wet * (imprintState.incubating ? .15 : .10);
 
       interactiveObjectImg.style.transform = `rotate(${microRot.toFixed(3)}deg) scale(${microScale.toFixed(4)})`;
       interactiveObjectImg.style.filter = `contrast(${contrast.toFixed(3)}) saturate(${saturation.toFixed(3)}) brightness(${brightness.toFixed(3)})`;
 
-      if (time >= imprintState.nextSeepAt && progress < .82 && imprintState.seepBursts < 5) {
-        spawnImprintFragments(imprintState.x, imprintState.y, imprintState.size, 2 + Math.floor(Math.random() * 3));
+      const maxSeepBursts = imprintState.incubating ? 8 : 5;
+      if (time >= imprintState.nextSeepAt && progress < (imprintState.incubating ? .92 : .82) && imprintState.seepBursts < maxSeepBursts) {
+        spawnImprintFragments(imprintState.x, imprintState.y, imprintState.size, imprintState.incubating ? 3 + Math.floor(Math.random() * 3) : 2 + Math.floor(Math.random() * 3));
         imprintState.seepBursts += 1;
-        imprintState.nextSeepAt = time + 760 + Math.random() * 1500;
+        imprintState.nextSeepAt = time + (imprintState.incubating ? 620 : 760) + Math.random() * (imprintState.incubating ? 1250 : 1500);
+      }
+
+      if (imprintState.incubating && !imprintState.collapsed && progress > .92) {
+        imprintState.collapsed = true;
+        spawnImprintFragments(imprintState.x, imprintState.y + imprintState.size * .12, imprintState.size * 1.12, 10);
       }
 
       if (progress >= 1) {
@@ -1883,10 +1945,15 @@ th {
       const dy = (y - body.y) / (body.ry * 1.88);
       const near = clamp(1 - (dx * dx + dy * dy), 0, 1);
       if (near <= .035) return;
-      organTouchPulse = clamp(organTouchPulse + .20 + near * .30, 0, 1);
-      organReflex = clamp(organReflex + .010 + near * .020, 0, 1);
-      pointer.wetHeat = clamp(pointer.wetHeat + .035 + near * .055, 0, 1);
-      pointer.pressHeat = clamp(pointer.pressHeat + .018 + near * .035, 0, 1);
+      const now = performance.now();
+      const sinceLast = now - lastOrganPulseAt;
+      const fatigue = sinceLast < 850 ? .68 : sinceLast < 1600 ? .84 : 1;
+      lastOrganPulseAt = now;
+      organTouchPulse = clamp(organTouchPulse + (.32 + near * .46) * fatigue, 0, 1);
+      organReflex = clamp(organReflex + (.018 + near * .034) * fatigue, 0, 1);
+      organShudderHeat = clamp(organShudderHeat + (.48 + near * .58) * fatigue, 0, 1);
+      pointer.wetHeat = clamp(pointer.wetHeat + (.058 + near * .088) * fatigue, 0, 1);
+      pointer.pressHeat = clamp(pointer.pressHeat + (.034 + near * .058) * fatigue, 0, 1);
     }
 
     function clearStressClasses() {
@@ -1935,8 +2002,12 @@ th {
       drawFpsAverage: 0,
       drawFrameCount: 0
     };
+    let lastStatsPublishAt = 0;
 
-    function publishStats() {
+    function publishStats(force = false) {
+      const now = performance.now();
+      if (!debugMode && !force && now - lastStatsPublishAt < 1000) return;
+      lastStatsPublishAt = now;
       const canvasParticles =
         nuclei.length + clots.length + residues.length + edgeCrumbs.length + contactScars.length +
         expelledWaste.length + lowerRightResidue.length +
@@ -2050,28 +2121,26 @@ th {
     }
 
     function getBreathState(time, activity = 1) {
-      const cycle = 34000;
-      const phase = (((time - animationStartedAt) / cycle) + .36) % 1;
-      const inhale = smoothStep(.08, .40, phase);
-      const held = 1 - smoothStep(.54, .70, phase);
-      const organ = clamp(inhale * held, .075, 1) * activity;
-      const digest = Math.pow(
-        smoothStep(.34, .62, phase) * (1 - smoothStep(.76, .94, phase)),
-        1.35
-      ) * activity;
+      const cycle = 36500;
+      const phase = (((time - animationStartedAt) / cycle) + .34) % 1;
       const ingest = Math.pow(
-        smoothStep(.22, .46, phase) * (1 - smoothStep(.58, .76, phase)),
-        1.22
+        smoothStep(.12, .36, phase) * (1 - smoothStep(.48, .64, phase)),
+        1.18
       ) * activity;
-      const membrane = clamp(.09 + organ * .36 + digest * .36, 0, 1) * activity;
+      const digest = Math.pow(
+        smoothStep(.34, .56, phase) * (1 - smoothStep(.70, .86, phase)),
+        1.28
+      ) * activity;
       const expel = Math.pow(
-        smoothStep(.66, .86, phase) * (1 - smoothStep(.94, 1, phase)),
-        1.2
+        smoothStep(.62, .79, phase) * (1 - smoothStep(.90, 1, phase)),
+        1.15
       ) * activity;
+      const organ = clamp(.13 + ingest * .38 + digest * .34 + expel * .14, .075, 1) * activity;
+      const membrane = clamp(.10 + ingest * .18 + digest * .42 + expel * .18, 0, 1) * activity;
       const rest = clamp(smoothStep(.84, .98, phase) + (1 - smoothStep(.00, .10, phase)), 0, 1);
       return {
         phase,
-        breath: clamp(.095 + organ * .45 + digest * .23 + expel * .06, 0, .72),
+        breath: clamp(.085 + organ * .34 + ingest * .12 + digest * .24 + expel * .10, 0, .72),
         organ,
         membrane,
         ingest,
@@ -2624,7 +2693,43 @@ th {
           color: pick(localRng, palette)
         });
       }
-      publishStats();
+      assignParticleActivityTiers();
+      publishStats(true);
+    }
+
+    function assignParticleActivityTiers() {
+      nuclei.forEach((particle, index) => {
+        const livelyCore = particle.weight > .58 || particle.plumePeak || particle.form === "thread";
+        particle.activityTier = livelyCore ? "live" : (index % 4 === 0 ? "slow" : "still");
+      });
+      clots.forEach((clot, index) => {
+        const livelyCore = clot.plumePeak || clot.core > .58 || clot.form === "thread";
+        clot.activityTier = livelyCore ? "live" : (index % 3 === 0 ? "slow" : "still");
+      });
+      residues.forEach((particle, index) => {
+        particle.activityTier = index % 5 === 0 ? "slow" : "still";
+      });
+      edgeCrumbs.forEach((crumb, index) => {
+        crumb.activityTier = crumb.alpha > .34 && crumb.form !== "dust" ? "live" : (index % 4 === 0 ? "slow" : "still");
+      });
+      contactScars.forEach((scar) => {
+        scar.activityTier = "still";
+      });
+      lowerRightResidue.forEach((residue, index) => {
+        residue.activityTier = index % 4 === 0 ? "slow" : "still";
+      });
+    }
+
+    function particleTierTime(item, time) {
+      if (item.activityTier === "still") return 0;
+      if (item.activityTier === "slow") return Math.floor(time / 360) * 360;
+      return time;
+    }
+
+    function particleTierMotion(item) {
+      if (item.activityTier === "still") return 0;
+      if (item.activityTier === "slow") return .32;
+      return 1;
     }
 
     function prepareInfectionGradient() {
@@ -2705,7 +2810,7 @@ th {
       });
       mutatedDomSpanCount = document.querySelectorAll(".infected-char").length;
       animatedDomSpanCount = document.querySelectorAll(".infection-near .infected-char, .infection-inside .infected-char, .infection-chaotic .infected-char").length;
-      publishStats();
+      publishStats(true);
     }
 
     function resize() {
@@ -2735,11 +2840,13 @@ th {
     function drawTextParticle(particle, time, breath, heat) {
       const startupEase = getStartupEase(time);
       const corePulse = Math.pow(particle.weight, 2.45);
-      const motionFactor = particleMotionFactor(particle, corePulse);
-      const local = time * (.000036 + startupEase * .000055) * motionFactor + particle.phase;
-      const syncBreath = breath * .44 + currentBreath.organ * .56;
+      const tierMotion = particleTierMotion(particle);
+      const tierTime = particleTierTime(particle, time);
+      const motionFactor = particleMotionFactor(particle, corePulse) * tierMotion;
+      const local = tierTime * (.000036 + startupEase * .000055) * Math.max(motionFactor, .18) + particle.phase;
+      const syncBreath = particle.activityTier === "still" ? 0 : (breath * .44 + currentBreath.organ * .56);
       const motionGate = (.13 + startupEase * .49) * motionFactor;
-      const pulse = Math.sin(local * .92) * syncBreath * (.30 + motionFactor * .70);
+      const pulse = particle.activityTier === "still" ? 0 : Math.sin(local * .92) * syncBreath * (.30 + motionFactor * .70);
       const edgeStillness = .08 + corePulse * .92;
       const x = particle.x + Math.cos(local * .72) * particle.amp * (.016 + syncBreath * .074 * edgeStillness + heat * .030 * corePulse) * motionGate;
       const y = particle.y + Math.sin(local * .64) * particle.amp * (.016 + syncBreath * .080 * edgeStillness + heat * .030 * corePulse) * motionGate;
@@ -2782,11 +2889,13 @@ th {
       for (const clot of clots) {
         if (!isPointVisible(clot.x, clot.y, 140)) continue;
         const corePulse = Math.pow(clot.core, 2.1);
-        const motionFactor = particleMotionFactor(clot, corePulse);
-        const local = time * (.000032 + startupEase * .000050) * motionFactor + clot.phase;
-        const organ = currentBreath.organ;
+        const tierMotion = particleTierMotion(clot);
+        const tierTime = particleTierTime(clot, time);
+        const motionFactor = particleMotionFactor(clot, corePulse) * tierMotion;
+        const local = tierTime * (.000032 + startupEase * .000050) * Math.max(motionFactor, .18) + clot.phase;
+        const organ = clot.activityTier === "still" ? 0 : currentBreath.organ;
         const motionGate = (.13 + startupEase * .49) * motionFactor;
-        const swell = .975 + organ * .064 * corePulse + breath * .034 * corePulse + Math.sin(local * .76) * .007 * corePulse + heat * .012 * corePulse;
+        const swell = .975 + organ * .064 * corePulse + (clot.activityTier === "still" ? 0 : breath) * .034 * corePulse + Math.sin(local * .76) * .007 * corePulse * tierMotion + heat * .012 * corePulse;
         const x = clot.x + Math.cos(local * .72) * clot.amp * (.016 + organ * .046 * corePulse) * motionGate;
         const y = clot.y + Math.sin(local * .62) * clot.amp * (.016 + organ * .052 * corePulse) * motionGate;
         ctx.save();
@@ -3025,8 +3134,10 @@ th {
     function drawContactScars(time, breath) {
       for (const scar of contactScars) {
         if (!isPointVisible(scar.x, scar.y, scar.rx + 100)) continue;
-        const local = time * .00011 + scar.phase;
-        const pulse = .82 + Math.sin(local) * .10 + breath * .12;
+        const tierTime = particleTierTime(scar, time);
+        const tierMotion = particleTierMotion(scar);
+        const local = tierTime * .00011 + scar.phase;
+        const pulse = .82 + Math.sin(local) * .10 * tierMotion + breath * .12 * tierMotion;
         ctx.save();
         ctx.translate(
           scar.x + Math.cos(local * .7) * .45,
@@ -3051,17 +3162,19 @@ th {
     function drawEdgeCrumbs(time, breath) {
       for (const crumb of edgeCrumbs) {
         if (!isPointVisible(crumb.x, crumb.y, 95)) continue;
-        const local = time * .000070 + crumb.phase;
+        const tierTime = particleTierTime(crumb, time);
+        const tierMotion = particleTierMotion(crumb);
+        const local = tierTime * .000070 + crumb.phase;
         ctx.save();
         ctx.translate(
-          crumb.x + Math.cos(local * .82) * crumb.amp * (.055 + breath * .070),
-          crumb.y + Math.sin(local * .66) * crumb.amp * (.055 + breath * .075)
+          crumb.x + Math.cos(local * .82) * crumb.amp * (.055 + breath * .070) * tierMotion,
+          crumb.y + Math.sin(local * .66) * crumb.amp * (.055 + breath * .075) * tierMotion
         );
-        ctx.rotate(crumb.rot + Math.sin(local) * .038);
+        ctx.rotate(crumb.rot + Math.sin(local) * .038 * tierMotion);
         const form = crumb.form || "dust";
         if (form === "thread") ctx.scale(1.42, .78);
         if (form === "clot") ctx.scale(.94, 1.08);
-        ctx.globalAlpha = (crumb.alpha + breath * .064) * .84;
+        ctx.globalAlpha = (crumb.alpha + breath * .064 * tierMotion) * .84;
         ctx.fillStyle = crumb.alpha > .34 ? "rgba(22,19,17,.46)" : "rgba(78,68,52,.28)";
         ctx.shadowColor = "rgba(0,0,0,.20)";
         ctx.shadowBlur = 1.2 + breath * 1.8 + (form === "clot" ? .9 : 0);
@@ -3076,28 +3189,32 @@ th {
       }
     }
 
-    function drawExpelledWaste(time, breath) {
+    function drawExpelledWaste(time, breath, loadShed = false) {
       const motionFactor = connectorMotionFactor(.25);
       const steppedTime = Math.floor(time / 180) * 180;
-      for (const waste of expelledWaste) {
+      const wasteStride = loadShed ? 3 : 1;
+      const wasteStart = loadShed ? frameToggle % wasteStride : 0;
+      for (let wasteIndex = wasteStart; wasteIndex < expelledWaste.length; wasteIndex += wasteStride) {
+        const waste = expelledWaste[wasteIndex];
         const expel = currentBreath.expel;
-        const local = (steppedTime * waste.speed * (.82 + expel * .30) * motionFactor + waste.phase + expel * .054) % 1;
+        const local = (steppedTime * waste.speed * (.70 + expel * .62) * motionFactor + waste.phase + expel * .090) % 1;
         const eased = local < .72
           ? Math.pow(local / .72, 1.35) * .72
           : .72 + (local - .72) * .82;
-        const fall = eased * waste.flow;
-        const expelPush = expel * waste.settle * .18;
+        const expelGate = Math.pow(expel, 1.18);
+        const fall = eased * waste.flow * (1 + expelGate * .42);
+        const expelPush = expelGate * waste.settle * 18;
         const streamBias = (waste.stream || 0) > .62 ? 1 : .52;
-        const x = waste.x + Math.sin(steppedTime * .00011 * motionFactor + waste.phase) * waste.side * .040 * motionFactor + eased * waste.side * (.38 + streamBias * .25 + expel * .08) * (.34 + motionFactor * .66);
-        const y = waste.y + fall * waste.settle + expelPush + Math.pow(eased, 1.7) * (6 + streamBias * 10 + expel * 10);
+        const x = waste.x + Math.sin(steppedTime * .00008 * motionFactor + waste.phase) * waste.side * .030 * motionFactor + eased * waste.side * (.40 + streamBias * .28 + expelGate * .16) * (.34 + motionFactor * .66);
+        const y = waste.y + fall * waste.settle + expelPush + Math.pow(eased, 1.7) * (7 + streamBias * 14 + expelGate * 22);
         if (!isPointVisible(x, y, 110)) continue;
         ctx.save();
         ctx.translate(x, y);
-        ctx.rotate(waste.rot + Math.sin(steppedTime * .00012 * motionFactor + waste.phase) * .045 * motionFactor + eased * (.20 + streamBias * .05) * (.40 + motionFactor * .60));
-        ctx.globalAlpha = clamp(waste.alpha * (1 - eased * .18) + breath * .008 + expel * (.052 + streamBias * .018), .038, .36);
+        ctx.rotate(waste.rot + Math.sin(steppedTime * .00010 * motionFactor + waste.phase) * .036 * motionFactor + eased * (.22 + streamBias * .07) * (.40 + motionFactor * .60));
+        ctx.globalAlpha = clamp(waste.alpha * (1 - eased * .16) + breath * .006 + expelGate * (.082 + streamBias * .030), .038, .40);
         ctx.fillStyle = waste.alpha > .24 ? "rgba(16,14,12,.36)" : "rgba(72,62,47,.23)";
         ctx.shadowColor = "rgba(0,0,0,.18)";
-        ctx.shadowBlur = .6 + breath * .8 + expel * 1.1;
+        ctx.shadowBlur = .6 + breath * .8 + expelGate * 1.8;
         ctx.font = `${waste.alpha > .24 ? 620 : 480} ${waste.size * (1 - eased * .08)}px "Times New Roman", Times, serif`;
         ctx.fillText(waste.char, 0, 0);
         ctx.restore();
@@ -3111,7 +3228,9 @@ th {
         const ingest = currentBreath.ingest;
         const digest = currentBreath.digest;
         const membrane = currentBreath.membrane;
-        const flex = Math.sin(time * .000082 * motionFactor + stream.phase * 9) * stream.width * (.048 + ingest * .052 + digest * .030) * motionFactor;
+        const ingestGate = Math.pow(ingest, 1.18);
+        const digestGate = Math.pow(digest, 1.12);
+        const flex = Math.sin(time * .000068 * motionFactor + stream.phase * 9) * stream.width * (.040 + ingestGate * .078 + digestGate * .026) * motionFactor;
 
         ctx.save();
         ctx.beginPath();
@@ -3125,35 +3244,35 @@ th {
           stream.y3
         );
         ctx.globalCompositeOperation = "multiply";
-        ctx.globalAlpha = clamp(stream.alpha + ingest * .060 + digest * .030 + breath * .010, .026, .20);
+        ctx.globalAlpha = clamp(stream.alpha + ingestGate * .090 + digestGate * .026 + breath * .008, .026, .24);
         ctx.strokeStyle = "rgba(42,34,29,.28)";
-        ctx.lineWidth = .42 + membrane * .42 + ingest * .28;
+        ctx.lineWidth = .38 + membrane * .34 + ingestGate * .44;
         ctx.shadowColor = "rgba(10,7,6,.14)";
-        ctx.shadowBlur = 1.1 + ingest * 1.7 + digest * 1.2;
+        ctx.shadowBlur = 1.0 + ingestGate * 2.2 + digestGate * 1.1;
         ctx.stroke();
         ctx.restore();
 
         for (const fragment of stream.fragments) {
-          const raw = (time * stream.speed * (.66 + ingest * .22) * motionFactor + stream.phase + fragment.offset + ingest * .040 + digest * .018) % 1;
-          const t = Math.pow(raw, .86 - ingest * .06);
+          const raw = (time * stream.speed * (.58 + ingestGate * .54) * motionFactor + stream.phase + fragment.offset + ingestGate * .070 + digestGate * .014) % 1;
+          const t = Math.pow(raw, .90 - ingestGate * .13);
           const x = cubic(stream.x0, stream.x1 + flex, stream.x2 - flex * .55, stream.x3, t);
           const y = cubic(stream.y0, stream.y1 - flex * .35, stream.y2 + flex * .42, stream.y3, t);
           const nx = cubic(stream.x0, stream.x1, stream.x2, stream.x3, clamp(t + .018, 0, 1));
           const ny = cubic(stream.y0, stream.y1, stream.y2, stream.y3, clamp(t + .018, 0, 1));
           const angle = Math.atan2(ny - y, nx - x);
           const swallowed = Math.pow(t, 1.65);
-          const side = Math.sin(time * .00015 * motionFactor + fragment.offset * 11) * fragment.side * (1 - swallowed * .60) * motionFactor;
+          const side = Math.sin(time * .00011 * motionFactor + fragment.offset * 11) * fragment.side * (1 - swallowed * .70) * motionFactor;
           const normalX = Math.sin(angle + Math.PI / 2);
           const normalY = -Math.cos(angle + Math.PI / 2);
 
           ctx.save();
           ctx.translate(x + normalX * side, y + normalY * side);
           ctx.rotate(angle + fragment.rot * (1 - swallowed * .66));
-          ctx.globalAlpha = clamp(fragment.alpha * (1 - swallowed * .36) + ingest * .070 + digest * .038 + breath * .010, .032, .30);
+          ctx.globalAlpha = clamp(fragment.alpha * (1 - swallowed * .40) + ingestGate * .100 + digestGate * .030 + breath * .008, .032, .34);
           ctx.fillStyle = fragment.char.length > 1 ? "rgba(45,39,32,.28)" : "rgba(24,21,18,.32)";
           ctx.shadowColor = "rgba(18,12,10,.18)";
-          ctx.shadowBlur = .8 + swallowed * 2.4 + ingest * 1.5 + digest * 1.0;
-          ctx.font = `${fragment.char.length > 3 ? 480 : 560} ${fragment.size * (fragment.char.length > 3 ? .72 : .92) * (1 - swallowed * .10)}px "Times New Roman", Times, serif`;
+          ctx.shadowBlur = .7 + swallowed * 2.6 + ingestGate * 2.0 + digestGate * .9;
+          ctx.font = `${fragment.char.length > 3 ? 480 : 560} ${fragment.size * (fragment.char.length > 3 ? .72 : .92) * (1 - swallowed * .16)}px "Times New Roman", Times, serif`;
           ctx.fillText(fragment.char, 0, 0);
           ctx.restore();
         }
@@ -3164,24 +3283,26 @@ th {
       const motionFactor = connectorMotionFactor(.40);
       for (const fragment of absorbedFragments) {
         if (!isCurveVisible(fragment, 150)) continue;
-        const flow = (time * fragment.speed * motionFactor + fragment.phase + currentBreath.digest * .018) % 1;
-        const t = Math.pow(flow, .88);
+        const ingestGate = Math.pow(currentBreath.ingest, 1.12);
+        const digestGate = Math.pow(currentBreath.digest, 1.15);
+        const flow = (time * fragment.speed * (.72 + ingestGate * .55) * motionFactor + fragment.phase + digestGate * .030) % 1;
+        const t = Math.pow(flow, .91 - ingestGate * .08);
         const x = cubic(fragment.x0, fragment.x1, fragment.x2, fragment.x3, t);
         const y = cubic(fragment.y0, fragment.y1, fragment.y2, fragment.y3, t);
         const nx = cubic(fragment.x0, fragment.x1, fragment.x2, fragment.x3, clamp(t + .018, 0, 1));
         const ny = cubic(fragment.y0, fragment.y1, fragment.y2, fragment.y3, clamp(t + .018, 0, 1));
         const angle = Math.atan2(ny - y, nx - x);
         const digestion = Math.pow(t, 1.5);
-        const side = Math.sin(time * .00011 * motionFactor + fragment.phase * 7) * fragment.side * .46 * (1 - digestion * .45) * motionFactor;
+        const side = Math.sin(time * .000088 * motionFactor + fragment.phase * 7) * fragment.side * .42 * (1 - digestion * .52) * motionFactor;
 
         ctx.save();
         ctx.translate(x + Math.sin(angle + Math.PI / 2) * side, y - Math.cos(angle + Math.PI / 2) * side * .55);
         ctx.rotate(angle + fragment.rot * (1 - digestion * .60) + Math.sin(time * .00014 * motionFactor + fragment.phase) * .034 * motionFactor);
-        ctx.globalAlpha = clamp(fragment.alpha * (1 - digestion * .42) + currentBreath.digest * .030 + breath * .010, .035, .22);
+        ctx.globalAlpha = clamp(fragment.alpha * (1 - digestion * .45) + ingestGate * .045 + digestGate * .052 + breath * .007, .035, .26);
         ctx.fillStyle = fragment.char.length > 1 ? "rgba(45,39,32,.25)" : "rgba(24,21,18,.31)";
         ctx.shadowColor = "rgba(22,17,14,.14)";
-        ctx.shadowBlur = .6 + digestion * 1.8;
-        ctx.font = `${fragment.char.length > 1 ? 470 : 540} ${fragment.size * (1 - digestion * .18) * (fragment.char.length > 3 ? .72 : 1)}px "Times New Roman", Times, serif`;
+        ctx.shadowBlur = .6 + digestion * 2.1 + digestGate * 1.1;
+        ctx.font = `${fragment.char.length > 1 ? 470 : 540} ${fragment.size * (1 - digestion * .22) * (fragment.char.length > 3 ? .72 : 1)}px "Times New Roman", Times, serif`;
         ctx.fillText(fragment.char, 0, 0);
         ctx.restore();
       }
@@ -3190,15 +3311,17 @@ th {
     function drawLowerRightResidue(time, breath) {
       for (const residue of lowerRightResidue) {
         if (!isPointVisible(residue.x, residue.y, 100)) continue;
-        const motionFactor = particleMotionFactor(residue, .2);
-        const local = time * .00015 * motionFactor + residue.phase;
+        const tierMotion = particleTierMotion(residue);
+        const tierTime = particleTierTime(residue, time);
+        const motionFactor = particleMotionFactor(residue, .2) * tierMotion;
+        const local = tierTime * .00015 * Math.max(motionFactor, .18) + residue.phase;
         ctx.save();
         ctx.translate(
           residue.x + Math.cos(local * .75) * residue.amp * .070 * motionFactor,
           residue.y + Math.sin(local * .60) * residue.amp * .065 * motionFactor
         );
         ctx.rotate(residue.rot + Math.sin(local) * .026 * motionFactor);
-        ctx.globalAlpha = clamp(residue.alpha + breath * .025, .04, .30);
+        ctx.globalAlpha = clamp(residue.alpha + breath * .025 * tierMotion, .04, .30);
         ctx.fillStyle = "rgba(50,42,34,.20)";
         ctx.shadowColor = "rgba(68,56,40,.18)";
         ctx.shadowBlur = .75;
@@ -3432,7 +3555,7 @@ th {
     }
 
     function updateLongPressAbsorption(time) {
-      if (!pointer.downActive || !pointer.longPress || !body) return;
+      if (!pointer.downActive || !pointer.longPress || pointer.zone !== "organ" || !body) return;
       pointer.downStrength = clamp(pointer.downStrength + .028, 0, 1);
       pointer.pressHeat = clamp(pointer.pressHeat + .034, 0, 1);
       pointer.wetHeat = clamp(pointer.wetHeat + .026, 0, 1);
@@ -3505,10 +3628,13 @@ th {
         const touchDy = (hole.y - (pointer.touchY || body.y)) / (body.ry * .30);
         const touchLocality = clamp(1 - touchDx * touchDx - touchDy * touchDy, 0, 1);
         const touchDark = touchLocality * (pointer.pressHeat * .42 + pointer.tapHeat * .18 + pointer.longSignalHeat * .16 + organTouchPulse * .22);
-        const metabolicDark = primary * (currentBreath.digest * .52 + currentBreath.ingest * .10 + currentBreath.organ * .10 + currentBreath.expel * .06) + keyBreath * .10 + keyHole * openingLife * .11;
+        const ingestGate = Math.pow(currentBreath.ingest, 1.10);
+        const digestGate = Math.pow(currentBreath.digest, 1.16);
+        const expelGate = Math.pow(currentBreath.expel, 1.10);
+        const metabolicDark = primary * (digestGate * .70 + ingestGate * .16 + currentBreath.organ * .08 + expelGate * .04) + keyBreath * .10 + keyHole * openingLife * .11;
         const count = Math.round(12 + (hole.rx + hole.ry) * (.36 + primary * .10 + keyHole * .035));
         if (keyHole) {
-          const cavityBreath = clamp(.18 + holeBreath * .20 + keyBreath * .28 + metabolicDark * .48 + currentBreath.digest * .10 * keyHole, 0, .86);
+          const cavityBreath = clamp(.17 + holeBreath * .18 + keyBreath * .25 + metabolicDark * .58 + digestGate * .18 * keyHole, 0, .92);
           ctx.save();
           ctx.translate(hole.x, hole.y);
           ctx.rotate(Math.sin(time * .000095 + hole.phase) * .045 + (hole.primaryOrder || 0) * .18);
@@ -3517,19 +3643,19 @@ th {
             -hole.rx * .18, -hole.ry * .18, 0,
             0, 0, Math.max(hole.rx, hole.ry) * 1.34
           );
-          wet.addColorStop(0, `rgba(12,9,8,${.16 + cavityBreath * .20 + currentBreath.digest * .030})`);
-          wet.addColorStop(.38, `rgba(42,31,29,${.08 + cavityBreath * .12 + currentBreath.digest * .020})`);
-          wet.addColorStop(.68, `rgba(112,88,73,${.030 + cavityBreath * .045})`);
+          wet.addColorStop(0, `rgba(10,7,6,${.16 + cavityBreath * .24 + digestGate * .045})`);
+          wet.addColorStop(.36, `rgba(40,28,27,${.08 + cavityBreath * .14 + digestGate * .030})`);
+          wet.addColorStop(.68, `rgba(112,88,73,${.028 + cavityBreath * .050 + ingestGate * .012})`);
           wet.addColorStop(1, "rgba(0,0,0,0)");
           ctx.fillStyle = wet;
           ctx.shadowColor = "rgba(10,6,5,.25)";
-          ctx.shadowBlur = 2.4 + cavityBreath * 3.8 + currentBreath.digest * 1.4;
+          ctx.shadowBlur = 2.2 + cavityBreath * 4.5 + digestGate * 2.1;
           ctx.beginPath();
           ctx.ellipse(0, 0, hole.rx * (1.12 + keyBreath * .045), hole.ry * (1.06 + holeBreath * .050), 0, 0, Math.PI * 2);
           ctx.fill();
 
           ctx.globalCompositeOperation = "source-over";
-          ctx.globalAlpha = .18 + cavityBreath * .22;
+          ctx.globalAlpha = .16 + cavityBreath * .25;
           ctx.strokeStyle = "rgba(238,223,199,.28)";
           ctx.lineWidth = .42 + cavityBreath * .35;
           ctx.beginPath();
@@ -3559,32 +3685,38 @@ th {
     }
 
     function drawFrame(realTime) {
+      const drawTime = freezeAnimation ? frozenVisualTime : realTime;
       const interactionActive =
-        pointer.downActive ||
-        pointer.tapHeat > .035 ||
-        pointer.pressHeat > .040 ||
-        pointer.releaseHeat > .035 ||
-        pointer.longSignalHeat > .040 ||
-        interactionBursts.length > 0;
-      const interactionPriority = realTime < interactionPriorityUntil;
-      const scrolling = scrollSettle > .34;
+        !freezeAnimation && (
+          pointer.downActive ||
+          pointer.tapHeat > .035 ||
+          pointer.pressHeat > .040 ||
+          pointer.releaseHeat > .035 ||
+          pointer.longSignalHeat > .040 ||
+          interactionBursts.length > 0
+        );
+      const interactionPriority = !freezeAnimation && realTime < interactionPriorityUntil;
+      const interactionLoadShed = !freezeAnimation && realTime < interactionLoadShedUntil;
+      const scrolling = !freezeAnimation && scrollSettle > .34;
       const currentFrameMs = interactionActive ? interactionFrameMs : idleFrameMs;
       paper.classList.toggle("is-interacting", interactionActive);
       paper.classList.toggle("is-scrolling", scrolling);
-      if (realTime - last < currentFrameMs) {
+      if (!freezeAnimation && realTime - last < currentFrameMs) {
         requestAnimationFrame(drawFrame);
         return;
       }
       if (last) {
-        drawFpsLast = 1000 / (realTime - last);
+        drawFpsLast = freezeAnimation ? 0 : 1000 / (realTime - last);
         drawFpsSamples.push(drawFpsLast);
         if (drawFpsSamples.length > 240) drawFpsSamples.shift();
       }
       drawFrameCount++;
-      frameToggle++;
-      last = realTime - ((realTime - last) % currentFrameMs);
-      if (!visualClockStartedAt) visualClockStartedAt = realTime;
-      visualTime = Math.floor((realTime - visualClockStartedAt) / FIXED_VISUAL_FRAME_MS) * FIXED_VISUAL_FRAME_MS;
+      if (!freezeAnimation) frameToggle++;
+      last = freezeAnimation ? realTime : realTime - ((realTime - last) % currentFrameMs);
+      if (!visualClockStartedAt) visualClockStartedAt = freezeAnimation ? 0 : realTime;
+      visualTime = freezeAnimation
+        ? drawTime
+        : Math.floor((realTime - visualClockStartedAt) / FIXED_VISUAL_FRAME_MS) * FIXED_VISUAL_FRAME_MS;
       const time = visualTime;
       updateViewBounds();
       scrollSettle *= .86;
@@ -3595,11 +3727,12 @@ th {
       pointer.downStrength *= pointer.downActive ? .985 : .930;
       pointer.releaseHeat *= .948;
       organReflex *= pointer.downActive ? .982 : .948;
+      organShudderHeat *= pointer.downActive ? .976 : .902;
       updateLongPressAbsorption(time);
       const activity = 1 - scrollSettle * .58;
       currentBreath = getBreathState(time, activity);
-      const upperPlumeTarget = clamp(.40 + currentBreath.ingest * .24 + currentBreath.digest * .12 + currentBreath.organ * .12 + currentBreath.membrane * .08 - scrollSettle * .20, .32, .82);
-      upperPlumeDensity += (upperPlumeTarget - upperPlumeDensity) * .08;
+      const upperPlumeTarget = clamp(.36 + currentBreath.ingest * .34 + currentBreath.digest * .08 + currentBreath.organ * .08 + currentBreath.membrane * .05 - currentBreath.expel * .06 - scrollSettle * .20, .30, .82);
+      upperPlumeDensity += (upperPlumeTarget - upperPlumeDensity) * .055;
       const startupEase = getStartupEase(time);
       const startupLife = 1 - startupEase;
       const breath = currentBreath.breath;
@@ -3609,45 +3742,84 @@ th {
       if (organism) {
         const openingLife = Math.pow(startupLife, 1.35);
         const touchReflex = Math.max(organReflex, organTouchPulse * .18);
+        const heldShudder = pointer.downActive && pointer.longPress && pointer.zone === "organ" ? pointer.longSignalHeat * .96 : 0;
+        const shudder = clamp(Math.max(organShudderHeat, heldShudder), 0, 1);
+        const tetherX = Math.sin(time * .014) * shudder * .16;
+        const tetherY = Math.cos(time * .011) * shudder * .11;
+        const tetherR = Math.sin(time * .010) * shudder * .026;
         organism.style.setProperty("--organ-reflex", touchReflex.toFixed(3));
-        organism.style.setProperty("--touch-wet-a", (pointer.wetHeat * .38 + currentBreath.membrane * .066 + openingLife * .072 + organTouchPulse * .030).toFixed(3));
-        organism.style.setProperty("--touch-wet-b", (pointer.wetHeat * .28 + currentBreath.membrane * .050 + openingLife * .052 + organTouchPulse * .022).toFixed(3));
+        organism.style.setProperty("--touch-wet-a", (pointer.wetHeat * .38 + currentBreath.membrane * .055 + currentBreath.digest * .030 + openingLife * .072 + organTouchPulse * .030).toFixed(3));
+        organism.style.setProperty("--touch-wet-b", (pointer.wetHeat * .28 + currentBreath.membrane * .042 + currentBreath.digest * .022 + openingLife * .052 + organTouchPulse * .022).toFixed(3));
+        organism.style.setProperty("--organ-jitter-x", `${tetherX.toFixed(3)}px`);
+        organism.style.setProperty("--organ-jitter-y", `${tetherY.toFixed(3)}px`);
+        organism.style.setProperty("--organ-jitter-r", `${tetherR.toFixed(4)}deg`);
+        const coreJx = (Math.sin(time * .014 + .7) * 1.02 + Math.sin(time * .025 + 1.9) * .28) * shudder;
+        const coreJy = (Math.cos(time * .013 + 1.1) * .62 + Math.sin(time * .019 + .3) * .12) * shudder;
+        const coreJr = Math.sin(time * .011 + .2) * shudder * .108;
+        const membraneJx = (Math.sin(time * .023 + 2.4) * 1.56 + Math.sin(time * .036 + .4) * .42) * shudder;
+        const membraneJy = (Math.cos(time * .021 + 1.7) * .96 + Math.sin(time * .031 + 2.9) * .30) * shudder;
+        const membraneJr = Math.sin(time * .019 + 1.8) * shudder * .205;
+        const tendrilJx = (Math.sin(time * .027 + 3.1) * 1.28 + Math.sin(time * .043 + .8) * .34) * shudder;
+        const tendrilJy = (Math.cos(time * .017 + 2.6) * .56 + Math.sin(time * .033 + 3.8) * .32) * shudder;
+        const tendrilJr = Math.sin(time * .016 + 2.7) * shudder * .138;
+        if (lesionCoreLayer) {
+          lesionCoreLayer.style.setProperty("--core-jx", `${coreJx.toFixed(3)}px`);
+          lesionCoreLayer.style.setProperty("--core-jy", `${coreJy.toFixed(3)}px`);
+          lesionCoreLayer.style.setProperty("--core-jr", `${coreJr.toFixed(4)}deg`);
+        }
+        if (lesionMembraneLayer) {
+          lesionMembraneLayer.style.setProperty("--membrane-jx", `${membraneJx.toFixed(3)}px`);
+          lesionMembraneLayer.style.setProperty("--membrane-jy", `${membraneJy.toFixed(3)}px`);
+          lesionMembraneLayer.style.setProperty("--membrane-jr", `${membraneJr.toFixed(4)}deg`);
+        }
+        if (lesionTendrilLayer) {
+          lesionTendrilLayer.style.setProperty("--tendril-jx", `${tendrilJx.toFixed(3)}px`);
+          lesionTendrilLayer.style.setProperty("--tendril-jy", `${tendrilJy.toFixed(3)}px`);
+          lesionTendrilLayer.style.setProperty("--tendril-jr", `${tendrilJr.toFixed(4)}deg`);
+        }
       }
 
       ctx.clearRect(0, 0, width, height);
       ctx.globalCompositeOperation = "source-over";
 
-      const backgroundStride = scrolling ? 4 : interactionPriority ? 4 : interactionActive ? 2 : 3;
+      const backgroundStride = freezeAnimation ? 1 : scrolling ? 4 : interactionLoadShed ? 6 : interactionPriority ? 4 : interactionActive ? 2 : 3;
       const drawBackground = interactionPriority
         ? frameToggle % 2 === 0
-        : (!scrolling || interactionActive || frameToggle % 2 === 0);
-      const drawFusionConnectors = stableIpadParticleMode || !scrolling;
+        : (freezeAnimation || !scrolling || interactionActive || frameToggle % 2 === 0);
+      const drawFusionConnectors = freezeAnimation || !scrolling;
+      const drawPriorityBackground = !interactionLoadShed && drawBackground;
+      const drawPriorityDetail = !scrolling && (!interactionLoadShed || frameToggle % 3 === 0);
+      const drawPriorityReferences = !scrolling && (!interactionLoadShed || frameToggle % 4 === 0);
 
       for (let i = frameToggle % backgroundStride; i < tendrils.length; i += backgroundStride) {
         const tendril = tendrils[i];
         drawTendril(tendril, time, breath, heat);
-        if (interactionActive || frameToggle % 2 === 0) drawPulledFragments(tendril, time, breath);
+        if (!interactionLoadShed && (interactionActive || frameToggle % 2 === 0)) drawPulledFragments(tendril, time, breath);
       }
       if (drawFusionConnectors) drawSwallowStreams(time, breath);
       if (drawFusionConnectors) drawAbsorbedFragments(time, breath);
-      if (drawFusionConnectors) drawUpperBridgeParticles(time, breath);
-      if (drawBackground) drawMutationRopes(time, breath);
-      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawSpiderWebs(time, breath);
-      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawMutationSheets(time, breath);
-      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawContactScars(time, breath);
-      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawEdgeCrumbs(time, breath);
-      drawExpelledWaste(time, breath);
-      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawLowerRightResidue(time, breath);
-      if (!scrolling && (!interactionPriority || frameToggle % 2 === 0)) drawLifeMotes(time, breath);
+      if (drawFusionConnectors && (!interactionLoadShed || frameToggle % 2 === 0)) drawUpperBridgeParticles(time, breath);
+      if (drawPriorityBackground) drawMutationRopes(time, breath);
+      if (drawPriorityBackground && (!interactionPriority || frameToggle % 2 === 0)) drawSpiderWebs(time, breath);
+      if (drawPriorityBackground && (!interactionPriority || frameToggle % 2 === 0)) drawMutationSheets(time, breath);
+      if (drawPriorityDetail) drawContactScars(time, breath);
+      if (drawPriorityDetail) drawEdgeCrumbs(time, breath);
+      drawExpelledWaste(time, breath, interactionLoadShed);
+      if (drawPriorityReferences) drawLowerRightResidue(time, breath);
+      if (!scrolling && (!interactionLoadShed || frameToggle % 2 === 0)) drawLifeMotes(time, breath);
       drawClotMass(time, breath, heat);
 
-      for (let i = 0; i < residues.length; i += 1) {
+      const residueStride = interactionLoadShed ? 3 : 1;
+      for (let i = interactionLoadShed ? frameToggle % residueStride : 0; i < residues.length; i += residueStride) {
         const particle = residues[i];
         if (!isPointVisible(particle.x, particle.y, 110)) continue;
-        const motionFactor = particleMotionFactor(particle, .24);
-        const local = time * (.000025 + startupEase * .000036) * motionFactor + particle.phase;
+        if (interactionLoadShed && !isPriorityParticleZone(particle.x, particle.y)) continue;
+        const tierMotion = particleTierMotion(particle);
+        const tierTime = particleTierTime(particle, time);
+        const motionFactor = particleMotionFactor(particle, .24) * tierMotion;
+        const local = tierTime * (.000025 + startupEase * .000036) * Math.max(motionFactor, .18) + particle.phase;
         const motionGate = (.16 + startupEase * .40) * motionFactor;
-        const syncBreath = breath * .38 + currentBreath.organ * .62;
+        const syncBreath = particle.activityTier === "still" ? 0 : (breath * .38 + currentBreath.organ * .62);
         ctx.save();
         ctx.translate(
           particle.x + Math.cos(local) * particle.amp * .022 * motionGate,
@@ -3661,9 +3833,12 @@ th {
         ctx.restore();
       }
 
-      for (let i = 0; i < nuclei.length; i += 1) {
-        if (!isPointVisible(nuclei[i].x, nuclei[i].y, 120)) continue;
-        drawTextParticle(nuclei[i], time, breath, heat);
+      const nucleiStride = interactionLoadShed ? 2 : 1;
+      for (let i = interactionLoadShed ? frameToggle % nucleiStride : 0; i < nuclei.length; i += nucleiStride) {
+        const nucleus = nuclei[i];
+        if (!isPointVisible(nucleus.x, nucleus.y, 120)) continue;
+        if (interactionLoadShed && !isPriorityParticleZone(nucleus.x, nucleus.y)) continue;
+        drawTextParticle(nucleus, time, breath, heat);
       }
       drawHoleEdges(time, breath);
       drawTouchResponse(time);
@@ -3691,39 +3866,126 @@ th {
       return pointer.active;
     }
 
+    function ellipseHit(x, y, cx, cy, rx, ry, threshold = 1) {
+      const dx = (x - cx) / rx;
+      const dy = (y - cy) / ry;
+      return dx * dx + dy * dy < threshold;
+    }
+
+    function isOrganHitTerritory(x, y) {
+      if (!body) return false;
+      const coreDx = (x - body.x) / (body.rx * 1.08);
+      const coreDy = (y - body.y) / (body.ry * 1.03);
+      if (coreDx * coreDx + coreDy * coreDy < 1.05) return true;
+      const organHaloDx = (x - body.x) / (body.rx * 1.36);
+      const organHaloDy = (y - body.y) / (body.ry * 1.24);
+      if (organHaloDx * organHaloDx + organHaloDy * organHaloDy < 1.10) return true;
+
+      return (
+        ellipseHit(x, y, body.x + body.rx * .30, body.y - body.ry * .02, body.rx * 1.22, body.ry * 1.06, 1) ||
+        ellipseHit(x, y, body.x + body.rx * .18, body.y + body.ry * .54, body.rx * 1.03, body.ry * .78, 1) ||
+        ellipseHit(x, y, body.x - body.rx * .76, body.y + body.ry * .05, body.rx * 1.32, body.ry * .72, 1) ||
+        ellipseHit(x, y, body.x + body.rx * .86, body.y + body.ry * .10, body.rx * .58, body.ry * .92, 1)
+      );
+    }
+
+    function getInteractionZone(x, y, options = {}) {
+      if (!body) return y > height * .42 ? "field" : "none";
+      const now = performance.now();
+      if (isOrganHitTerritory(x, y)) {
+        lastOrganHoverAt = now;
+        return "organ";
+      }
+      if (options.allowOrganHoverHold && now - lastOrganHoverAt < 220) return "organ";
+
+      const lowerPaperField =
+        y > height * .40 &&
+        y < height * .96 &&
+        x > width * .05 &&
+        x < width * .96;
+      if (!lowerPaperField) return "none";
+
+      const fieldDx = (x - body.x) / (body.rx * 2.45);
+      const fieldDy = (y - body.y) / (body.ry * 2.25);
+      const nearInfection = fieldDx * fieldDx + fieldDy * fieldDy < 2.55;
+      const referenceField = y > height * .70;
+      const indexingField = y > height * .57 && y < height * .77;
+      return nearInfection || referenceField || indexingField ? "field" : "none";
+    }
+
+    function startOrganLongPress() {
+      pointer.longPress = true;
+      debugState.longPressTriggered = true;
+      debugLog("longPress triggered");
+      markInteractionPriority(1600);
+      triggerInteractionStress("consume", pointer.touchX, pointer.touchY);
+      spawnInteractionBurst("long", pointer.touchX, pointer.touchY);
+      organTouchPulse = clamp(organTouchPulse + .68, 0, 1);
+      organReflex = clamp(organReflex + .22, 0, 1);
+      organShudderHeat = clamp(organShudderHeat + .98, 0, 1);
+      pointer.pressHeat = clamp(pointer.pressHeat + .66, 0, 1);
+      pointer.wetHeat = clamp(pointer.wetHeat + .72, 0, 1);
+      pointer.longSignalHeat = clamp(pointer.longSignalHeat + .86, 0, 1);
+    }
+
+    function startFieldIncubation() {
+      pointer.longPress = true;
+      debugState.longPressTriggered = true;
+      debugLog("longPress imprint incubation");
+      markInteractionPriority(1100);
+      showInteractiveObject(pointer.touchX, pointer.touchY, { incubating: true, duration: 10000 });
+    }
+
     paper.addEventListener("pointermove", (event) => {
       updatePointerFromEvent(event);
+      const hoverZone = getInteractionZone(pointer.x, pointer.y, { allowOrganHoverHold: true });
+      paper.classList.toggle("is-over-organ", hoverZone === "organ");
       pointer.heat = pointer.active ? clamp(pointer.heat + .08, 0, 1) : pointer.heat;
     }, { passive: true });
 
     paper.addEventListener("pointerdown", (event) => {
       updatePointerFromEvent(event);
+      const zone = getInteractionZone(pointer.x, pointer.y, { allowOrganHoverHold: true });
+      const isInteractive = zone !== "none";
       debugState.pointerdownDetected = true;
       debugState.pointerdownCount += 1;
-      debugLog("pointerdown", { pointerId: event.pointerId, pointerType: event.pointerType || "unknown", active: pointer.active });
-      pointer.down = pointer.active;
-      pointer.downActive = pointer.active;
+      debugLog("pointerdown", { pointerId: event.pointerId, pointerType: event.pointerType || "unknown", active: isInteractive, zone });
+      pointer.zone = zone;
+      pointer.active = isInteractive;
+      pointer.down = isInteractive;
+      pointer.downActive = isInteractive;
       pointer.longPress = false;
       pointer.immediateTouch = false;
-      pointer.pointerId = pointer.active ? event.pointerId : null;
+      pointer.pointerId = isInteractive ? event.pointerId : null;
       lastHoldAbsorbAt = 0;
       pointer.downAt = performance.now();
       pointer.touchX = pointer.x;
       pointer.touchY = pointer.y;
       if (pressTimer) window.clearTimeout(pressTimer);
-      if (!pointer.active) return;
+      if (!isInteractive) return;
       if (event.cancelable) event.preventDefault();
       if (paper.setPointerCapture && event.pointerId !== undefined) {
         try { paper.setPointerCapture(event.pointerId); } catch (error) {}
       }
       markInteractionPriority(1100);
-      triggerOrganTouchPulse(pointer.x, pointer.y);
       pointer.downStrength = clamp(pointer.downStrength + .30, 0, 1);
       pointer.heat = clamp(pointer.heat + .18, 0, 1);
-      pointer.immediateTouch = true;
-      debugState.immediateTouchFeedback = true;
-      debugLog("immediate touch feedback");
-      showInteractiveObject(pointer.x, pointer.y);
+      if (zone === "organ") {
+        triggerOrganTouchPulse(pointer.x, pointer.y);
+        triggerInteractionStress("touch", pointer.x, pointer.y);
+        spawnInstantRecoil(pointer.x, pointer.y);
+        pointer.immediateTouch = true;
+        debugState.immediateTouchFeedback = true;
+        debugLog("immediate organ touch feedback");
+        pressTimer = window.setTimeout(() => {
+          if (pointer.downActive && pointer.zone === "organ") startOrganLongPress();
+        }, 620);
+      } else {
+        debugLog("field touch armed");
+        pressTimer = window.setTimeout(() => {
+          if (pointer.downActive && pointer.zone === "field") startFieldIncubation();
+        }, 620);
+      }
     }, { passive: false });
 
     function finishPointer(event) {
@@ -3731,6 +3993,7 @@ th {
       const wasActive = pointer.downActive;
       const wasLong = pointer.longPress;
       const hadImmediateTouch = pointer.immediateTouch;
+      const zone = pointer.zone;
       if (event) updatePointerFromEvent(event);
       if (pressTimer) window.clearTimeout(pressTimer);
       pressTimer = 0;
@@ -3746,22 +4009,28 @@ th {
         debugState.releaseCount += 1;
         debugLog("pointerup / release", { wasDown, wasLong });
       }
-      if (wasActive && !hadImmediateTouch) showInteractiveObject(pointer.touchX || pointer.x, pointer.touchY || pointer.y);
+      if (wasActive && zone === "field" && !wasLong) {
+        showInteractiveObject(pointer.touchX || pointer.x, pointer.touchY || pointer.y, { duration: 2800 });
+      } else if (wasActive && zone === "organ" && wasLong) {
+        pointer.releaseHeat = clamp(pointer.releaseHeat + .10, 0, 1);
+      } else if (wasActive && zone === "organ" && !hadImmediateTouch) {
+        triggerOrganTouchPulse(pointer.touchX || pointer.x, pointer.touchY || pointer.y);
+      }
       pointer.down = false;
       pointer.downActive = false;
       pointer.longPress = false;
       pointer.immediateTouch = false;
       pointer.pointerId = null;
       pointer.active = false;
+      pointer.zone = "none";
+      lastPointerFinishAt = performance.now();
     }
 
     paper.addEventListener("pointerup", finishPointer, { passive: true });
     paper.addEventListener("pointercancel", finishPointer, { passive: true });
 
     paper.addEventListener("click", (event) => {
-      if (!updatePointerFromEvent(event)) return;
-      markInteractionPriority(700);
-      showInteractiveObject(pointer.x, pointer.y);
+      if (performance.now() - lastPointerFinishAt < 1400) return;
     }, { passive: true });
 
     paper.addEventListener("contextmenu", (event) => {
@@ -3778,8 +4047,11 @@ th {
       if (!pointer.downActive) {
         pointer.down = false;
         pointer.longPress = false;
+        pointer.zone = "none";
       }
       pointer.active = false;
+      lastOrganHoverAt = 0;
+      paper.classList.remove("is-over-organ");
     });
 
     window.addEventListener("scroll", () => {
