@@ -295,7 +295,7 @@ body.is-animation-frozen .stage {
   top: 7.6%;
   opacity: calc(.885 + var(--organ-digest, 0) * .040 + var(--organ-ingest, 0) * .018);
   filter: contrast(1.025) saturate(.93) brightness(1.055) drop-shadow(0 10px 15px rgba(24, 18, 14, .17));
-  animation: lesion-core-breathe 42s cubic-bezier(.42, 0, .32, 1) infinite;
+  animation: lesion-core-breathe 39s cubic-bezier(.42, 0, .32, 1) infinite;
   animation-delay: -7.8s;
   scale: calc(1 + var(--organ-reflex, 0) * .0024 + var(--organ-digest, 0) * .0032);
 }
@@ -307,7 +307,7 @@ body.is-animation-frozen .stage {
   opacity: calc(.62 + var(--organ-membrane, 0) * .090 + var(--organ-digest, 0) * .040);
   filter: contrast(.84) saturate(.50) brightness(1.35);
   mix-blend-mode: multiply;
-  animation: lesion-membrane-breathe 50s cubic-bezier(.43, 0, .30, 1) infinite;
+  animation: lesion-membrane-breathe 46s cubic-bezier(.43, 0, .30, 1) infinite;
   animation-delay: -9.6s;
   scale: calc(1 + var(--organ-reflex, 0) * .0036 + var(--organ-membrane, 0) * .0044);
 }
@@ -316,12 +316,32 @@ body.is-animation-frozen .stage {
   width: 98%;
   left: -.55%;
   top: -1.5%;
-  opacity: calc(.48 + var(--organ-ingest, 0) * .075 + var(--organ-expel, 0) * .026);
+  opacity: calc(.52 + var(--organ-ingest, 0) * .075 + var(--organ-expel, 0) * .026);
   filter: contrast(.84) saturate(.46) brightness(1.32) drop-shadow(0 1px 1px rgba(37, 29, 24, .05));
-  animation: lesion-tendril-breathe 58s ease-in-out infinite;
+  animation: lesion-tendril-breathe 53s ease-in-out infinite;
   animation-delay: -12.4s;
 }
 
+.lesion-debris {
+  width: 61.846%;
+  left: 36.773%;
+  top: -3.036%;
+  opacity: .26;
+  filter: contrast(.78) saturate(.44) brightness(1.42);
+  animation: lesion-debris-drift 52s ease-in-out infinite;
+  animation-delay: -15.1s;
+}
+
+.lesion-dust {
+  width: 78.669%;
+  left: 24.170%;
+  top: -8.805%;
+  opacity: .07;
+  filter: contrast(.70) saturate(.36) brightness(1.32);
+  mix-blend-mode: multiply;
+  animation: lesion-dust-drift 60s ease-in-out infinite;
+  animation-delay: -18.5s;
+}
 
 .interaction-stress {
   position: absolute;
@@ -455,6 +475,34 @@ body.is-animation-frozen .lesion-organism::after {
   }
 }
 
+@keyframes lesion-debris-drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: .22;
+  }
+  56% {
+    transform: translate(.18%, -.12%) scale(1.004);
+    opacity: .30;
+  }
+}
+
+@keyframes lesion-dust-drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+    opacity: .05;
+    filter: contrast(.68) saturate(.34) brightness(1.34);
+  }
+  43% {
+    transform: translate(.13%, -.07%) scale(1.002);
+    opacity: .08;
+    filter: contrast(.73) saturate(.38) brightness(1.30);
+  }
+  71% {
+    transform: translate(-.08%, .055%) scale(.999);
+    opacity: .06;
+    filter: contrast(.70) saturate(.36) brightness(1.32);
+  }
+}
 
 @keyframes touch-stress-decay {
   0% {
@@ -1061,6 +1109,8 @@ th {
 </div>
 <div class="lesion-organism" aria-hidden="true">
   <img class="lesion-layer lesion-tendrils" data-lesion-asset="lesion_tendrils.webp" src="assets/lesions-opt/lesion_tendrils.webp" alt="">
+  <img class="lesion-layer lesion-debris" data-lesion-asset="lesion_edge_debris_lite.webp" src="assets/lesions-opt/lesion_edge_debris_lite.webp" alt="">
+  <img class="lesion-layer lesion-dust" data-lesion-asset="lesion_micro_citation_dust_lite.webp" src="assets/lesions-opt/lesion_micro_citation_dust_lite.webp" alt="">
   <img class="lesion-layer lesion-auxiliary" data-lesion-asset="lesion_auxiliary_composite.webp" src="assets/lesions-opt/lesion_auxiliary_composite.webp" alt="">
   <img class="lesion-layer lesion-core" data-lesion-asset="lesion_core_main.webp" src="assets/lesions-opt/lesion_core_main.webp" alt="">
   <img class="lesion-layer lesion-membrane" data-lesion-asset="lesion_membrane_overlay.webp" src="assets/lesions-opt/lesion_membrane_overlay.webp" alt="">
@@ -1576,6 +1626,8 @@ th {
     if (freezeAnimation) revealStage();
     const lesionAssetNames = [
       "lesion_tendrils.webp",
+      "lesion_edge_debris_lite.webp",
+      "lesion_micro_citation_dust_lite.webp",
       "lesion_auxiliary_composite.webp",
       "lesion_core_main.webp",
       "lesion_membrane_overlay.webp",
@@ -4276,7 +4328,7 @@ th {
       pointer.wetHeat = clamp(pointer.wetHeat + .026, 0, 1);
       pointer.longSignalHeat = clamp(pointer.longSignalHeat + .016, 0, 1);
       pointer.heat = clamp(pointer.heat + .026, 0, 1);
-      const interval = 300 + Math.sin(time * .0011) * 44 - currentBreath.digest * 42;
+      const interval = 250 + Math.sin(time * .0011) * 38 - currentBreath.digest * 48;
       if (time - lastHoldAbsorbAt < interval) return;
       lastHoldAbsorbAt = time;
       debugState.holdAbsorptionTriggered = true;
@@ -4767,18 +4819,18 @@ th {
       debugState.longPressTriggered = true;
       debugLog("longPress triggered");
       const now = performance.now();
-      organShudderHoldUntil = Math.max(organShudderHoldUntil, now + 3000);
-      interactionMetabolismStartsAt = now + 250;
+      organShudderHoldUntil = Math.max(organShudderHoldUntil, now + 3600);
+      interactionMetabolismStartsAt = now + 180;
       interactionMetabolismExpelled = false;
-      markInteractionPriority(3000, 3200);
+      markInteractionPriority(3600, 4000);
       triggerInteractionStress("consume", pointer.touchX, pointer.touchY);
       spawnInteractionBurst("long", pointer.touchX, pointer.touchY);
-      organTouchPulse = clamp(organTouchPulse + .68, 0, 1);
-      organReflex = clamp(organReflex + .22, 0, 1);
-      organShudderHeat = clamp(organShudderHeat + .98, 0, 1);
-      pointer.pressHeat = clamp(pointer.pressHeat + .66, 0, 1);
-      pointer.wetHeat = clamp(pointer.wetHeat + .72, 0, 1);
-      pointer.longSignalHeat = clamp(pointer.longSignalHeat + .86, 0, 1);
+      organTouchPulse = clamp(organTouchPulse + .74, 0, 1);
+      organReflex = clamp(organReflex + .25, 0, 1);
+      organShudderHeat = clamp(organShudderHeat + 1.00, 0, 1);
+      pointer.pressHeat = clamp(pointer.pressHeat + .72, 0, 1);
+      pointer.wetHeat = clamp(pointer.wetHeat + .80, 0, 1);
+      pointer.longSignalHeat = clamp(pointer.longSignalHeat + .92, 0, 1);
     }
 
     function startFieldIncubation() {
@@ -4860,7 +4912,7 @@ th {
         debugLog("field touch armed");
         pressTimer = window.setTimeout(() => {
           if (pointer.downActive && pointer.zone === "field") startFieldIncubation();
-        }, 420);
+        }, 650);
       }
     }, { passive: false });
 
