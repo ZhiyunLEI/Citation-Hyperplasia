@@ -1,4 +1,4 @@
-const CACHE_NAME = "citation-hyperplasia-mac-exhibition-v4";
+const CACHE_NAME = "citation-hyperplasia-mac-exhibition-v12";
 
 const ASSETS = [
   "./",
@@ -7,9 +7,7 @@ const ASSETS = [
   "./assets/lesions-opt/lesion_core_main.webp",
   "./assets/lesions-opt/lesion_membrane_overlay.webp",
   "./assets/lesions-opt/lesion_tendrils.webp",
-  "./assets/lesions-opt/lesion_edge_debris_lite.webp",
-  "./assets/lesions-opt/lesion_depth_shadow_lite.webp",
-  "./assets/lesions-opt/lesion_micro_citation_dust_lite.webp",
+  "./assets/lesions-opt/lesion_auxiliary_composite.webp",
   "./assets/lesions-opt/lesion_interactive_objects.webp"
 ];
 
